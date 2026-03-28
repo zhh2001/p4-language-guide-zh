@@ -2,6 +2,8 @@
 
 > A comprehensive Chinese tutorial for the P4 programming language (P4_16)
 
+教程入口：[`/P4.md`](/P4.md)
+
 ---
 
 ## 📘 项目简介
