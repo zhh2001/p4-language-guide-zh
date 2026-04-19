@@ -1,0 +1,13 @@
+# L2 转发表
+table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:01 => 1
+table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:02 => 2
+table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:03 => 3
+
+# ACL 规则（priority 越大越先）
+# 1. 拒绝 h1 -> h3 任何流量
+table_add MyIngress.acl MyIngress.deny 10.0.0.1&&&0xffffffff 10.0.0.3&&&0xffffffff 0&&&0 0&&&0 0&&&0 => 200
+
+# 2. 拒绝进入 10.0.0.0/24 的 SSH
+table_add MyIngress.acl MyIngress.deny 0&&&0 10.0.0.0&&&0xffffff00 6&&&0xff 0&&&0 22&&&0xffff => 100
+
+# （缺省规则已在 P4 源码中写为 permit）

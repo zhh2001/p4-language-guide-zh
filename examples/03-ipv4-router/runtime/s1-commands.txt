@@ -1,0 +1,13 @@
+# 三张表的静态配置
+
+# --- 路由表：目的 IP → (next hop, out port) ---
+table_add MyIngress.ipv4_lpm MyIngress.set_nhop 10.0.1.0/24 => 10.0.1.1 1
+table_add MyIngress.ipv4_lpm MyIngress.set_nhop 10.0.2.0/24 => 10.0.2.2 2
+
+# --- ARP 表：next hop IP → next hop MAC ---
+table_add MyIngress.arp MyIngress.rewrite_dst_mac 10.0.1.1 => 00:00:00:00:01:01
+table_add MyIngress.arp MyIngress.rewrite_dst_mac 10.0.2.2 => 00:00:00:00:02:02
+
+# --- 出端口的源 MAC ---
+table_add MyIngress.smac MyIngress.rewrite_src_mac 1 => 00:00:00:01:01:01
+table_add MyIngress.smac MyIngress.rewrite_src_mac 2 => 00:00:00:02:02:02

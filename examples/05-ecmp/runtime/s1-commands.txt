@@ -1,0 +1,6 @@
+# LPM → ECMP 组 1 (size = 2)
+table_add MyIngress.ipv4_lpm MyIngress.set_ecmp_group 10.0.2.0/24 => 1 2
+
+# 组 1 的两个下一跳
+table_add MyIngress.ecmp_group_to_nh MyIngress.set_nh 1 0 => 00:00:00:00:00:02 00:00:00:01:00:01 2
+table_add MyIngress.ecmp_group_to_nh MyIngress.set_nh 1 1 => 00:00:00:00:00:03 00:00:00:01:00:02 3
