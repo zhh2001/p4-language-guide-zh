@@ -118,7 +118,7 @@
 | 拓扑仿真 | Mininet |
 | 控制平面 | P4Runtime（gRPC）+ Python 客户端 |
 | 抓包 | `tcpdump`、Wireshark（含 P4 插件） |
-| IDE | VS Code + [`p4-analyzer`](https://marketplace.visualstudio.com/items?itemName=p4lang.p4-analyzer) |
+| IDE | VS Code |
 
 一键起环境：见 [01-环境搭建 · Docker 方式](./docs/01-环境搭建.md#方式一docker推荐)。
 
