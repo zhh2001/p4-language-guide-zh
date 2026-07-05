@@ -298,4 +298,6 @@ P4Runtime 通过 **election_id** 选主。更大的 id = 主；从机会收到 `
 
 ## 15.12 下一步
 
+完整的 P4Runtime API 教程可以看 [p4runtime-cn-labs](https://github.com/zhh2001/p4runtime-cn-labs)。
+
 你已经能写出完整的"数据平面 + 控制平面"配对。下一章我们扫一眼生产级的架构 [16 · PSA 与 TNA 简介](./16-PSA与TNA简介.md)，给你日后迁移做准备。
