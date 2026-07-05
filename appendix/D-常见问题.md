@@ -236,7 +236,7 @@ key = {
 
 ## D.6 问完这里还不行？
 
-1. 用 **最小化复现** 做一个 `.p4` + `.txt` + `.pcap`，发到 [本仓库 Issues](../../issues)
+1. 用 **最小化复现** 做一个 `.p4` + `.txt` + `.pcap`，发到 [本仓库 Issues](../../../issues)
 2. 或 [P4 community mailing list](https://lists.p4.org/)
 3. 英语好的话直接开 [p4lang/p4c](https://github.com/p4lang/p4c/issues) —— 官方维护者会回
 
