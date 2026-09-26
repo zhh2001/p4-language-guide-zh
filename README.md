@@ -4,7 +4,7 @@
 
 **一本从入门到精通的 P4_16 中文指南 · A Chinese Guide to P4_16 Programming**
 
-[![P4 Version](https://img.shields.io/badge/P4-P4__16-blue)](https://p4.org/p4-spec/docs/P4-16-working-spec.html)
+[![P4 Version](https://img.shields.io/badge/P4-P4__16-blue)](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 [![Target](https://img.shields.io/badge/Target-BMv2%20%7C%20v1model-orange)](https://github.com/p4lang/behavioral-model)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](#-贡献指南)
@@ -58,7 +58,7 @@
 | #   | 章节                                        | 你将学到                                                        |
 | --- | ------------------------------------------- | --------------------------------------------------------------- |
 | 01  | [环境搭建](./docs/01-环境搭建.md)           | 准备 Ubuntu 24.04 工具链，分别验证编译、BMv2 报文处理与 Mininet |
-| 02  | [P4 概述与核心概念](./docs/02-P4概述.md)    | PISA 架构、协议无关转发、P4 的生态位                            |
+| 02  | [P4 概述与核心概念](./docs/02-P4概述.md)    | P4 的设计目标、架构与目标的区别、数据平面与控制平面的分工       |
 | 03  | [第一个 P4 程序](./docs/03-第一个P4程序.md) | 在 BMv2 上跑通 Hello P4，建立流水线直觉                         |
 
 ### 第二阶段 · 语言核心
