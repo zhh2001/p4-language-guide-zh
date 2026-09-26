@@ -2,9 +2,9 @@
  * examples/01-hello/hello.p4
  *
  * 最小可运行的 P4 程序：把每个报文从它进入的端口原路返回。
- * 配合教程 docs/03-第一个P4程序.md 食用。
+ * 对应教程：docs/03-第一个P4程序.md。
  *
- * 编译:  p4c-bm2-ss --target bmv2 --arch v1model -o hello.json hello.p4
+ * 编译:  bash build.sh
  * 运行:  参见 run.sh
  */
 
@@ -21,7 +21,7 @@ parser MyParser(packet_in                packet,
                 inout metadata           meta,
                 inout standard_metadata_t std_meta) {
     state start {
-        transition accept;   // 不解析任何头，直接放行
+        transition accept;   // 结束解析，不提取报头；后续仍执行 Ingress
     }
 }
 
@@ -30,12 +30,11 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
     apply { }
 }
 
-/* ===== Ingress —— 核心逻辑 ===== */
+/* ===== Ingress：选择原入端口作为出端口 ===== */
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t std_meta) {
     apply {
-        // "报文反射"：把出端口设成入端口
         std_meta.egress_spec = std_meta.ingress_port;
     }
 }
@@ -52,7 +51,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
     apply { }
 }
 
-/* ===== Deparser（占位） ===== */
+/* ===== Deparser：BMv2 保留未解析的数据，本例不需要 emit ===== */
 control MyDeparser(packet_out packet, in headers hdr) {
     apply { }
 }

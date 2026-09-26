@@ -1,68 +1,107 @@
 #!/usr/bin/env bash
-# 用 veth + network namespace 跑 hello.p4
-# 需要 root。清理工作由 trap 自动完成。
-
+# 创建两主机拓扑，验证报文从原端口反射；--keep 保留拓扑供手工检查。
 set -euo pipefail
-HERE=$(cd "$(dirname "$0")" && pwd)
-cd "$HERE"
 
+keep=0
+case "${1:-}" in
+    --keep) keep=1; shift ;;
+    --help|-h) echo "用法：sudo bash examples/01-hello/run.sh [--keep]"; exit 0 ;;
+esac
+[[ $# -eq 0 ]] || { echo "未知参数；使用 --help 查看用法" >&2; exit 2; }
 [[ $EUID -eq 0 ]] || { echo "请用 sudo 运行" >&2; exit 1; }
+for tool in p4c-bm2-ss simple_switch ip python3; do
+    command -v "$tool" >/dev/null || { echo "缺少命令：$tool" >&2; exit 1; }
+done
+python3 -c 'import os; assert hasattr(os, "setns"), "需要 Python 3.12+（os.setns）"'
 
-command -v simple_switch >/dev/null \
-    || { echo "simple_switch 未找到，请先装 BMv2" >&2; exit 1; }
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+work_dir=$(mktemp -d /tmp/p4-hello.XXXXXX)
+suffix=${work_dir##*.}
+ns1="hello-$suffix-h1"
+ns2="hello-$suffix-h2"
+created_namespaces=()
+created_links=()
+switch_pid=""
 
-[[ -f hello.json ]] || ./build.sh
-
-BMV2_PID=""
 cleanup() {
-    echo "=== cleaning up ==="
-    [[ -n "$BMV2_PID" ]] && kill "$BMV2_PID" 2>/dev/null || true
-    for ns in h1 h2; do
-        ip netns del "$ns" 2>/dev/null || true
+    local status=$?
+    trap - EXIT INT TERM
+    if [[ -n "$switch_pid" ]]; then
+        kill "$switch_pid" 2>/dev/null || true
+        wait "$switch_pid" 2>/dev/null || true
+    fi
+    for link in "${created_links[@]}"; do
+        ip link del "$link" 2>/dev/null || true
     done
-    ip link del veth-s1a 2>/dev/null || true
-    ip link del veth-s1b 2>/dev/null || true
+    for namespace in "${created_namespaces[@]}"; do
+        ip netns del "$namespace" 2>/dev/null || true
+    done
+    if (( status != 0 && status != 130 && status != 143 )) && [[ -f "$work_dir/switch.log" ]]; then
+        echo "BMv2 日志末尾：" >&2
+        tail -n 40 "$work_dir/switch.log" >&2
+    fi
+    rm -rf -- "$work_dir"
+    exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-echo "=== creating namespaces + veth ==="
-ip netns add h1
-ip netns add h2
+# 每次编译当前源码，避免复用过期 JSON；临时产物不写入源码目录。
+bash "$script_dir/build.sh" "$work_dir"
 
-ip link add veth-h1 type veth peer name veth-s1a
-ip link add veth-h2 type veth peer name veth-s1b
+create_host() {
+    local namespace=$1 number=$2
+    local switch_if="hs$suffix$number" host_if="hh$suffix$number"
+    ip netns add "$namespace"
+    created_namespaces+=("$namespace")
+    ip link add "$switch_if" type veth peer name "$host_if"
+    created_links+=("$switch_if")
+    ip link set "$host_if" netns "$namespace"
+    ip netns exec "$namespace" ip link set "$host_if" name eth0
+    ip netns exec "$namespace" ip link set eth0 address "02:00:00:00:00:0$number"
+    ip netns exec "$namespace" ip addr add "10.0.0.$number/24" dev eth0
+    ip netns exec "$namespace" ip link set lo up
+    ip netns exec "$namespace" ip link set eth0 up
+    ip link set "$switch_if" up
+}
+create_host "$ns1" 1
+create_host "$ns2" 2
 
-ip link set veth-h1 netns h1
-ip link set veth-h2 netns h2
-
-ip netns exec h1 ip link set lo up
-ip netns exec h1 ip link set veth-h1 up
-ip netns exec h1 ip addr add 10.0.0.1/24 dev veth-h1
-
-ip netns exec h2 ip link set lo up
-ip netns exec h2 ip link set veth-h2 up
-ip netns exec h2 ip addr add 10.0.0.2/24 dev veth-h2
-
-for i in veth-s1a veth-s1b; do
-    ip link set "$i" up
-    ethtool -K "$i" tx off rx off sg off 2>/dev/null || true
-done
-
-echo "=== starting BMv2 ==="
 simple_switch --log-console --log-level info \
-    -i 1@veth-s1a -i 2@veth-s1b \
-    hello.json &
-BMV2_PID=$!
-sleep 1
+    --device-id "$$" --thrift-port 0 \
+    --notifications-addr "ipc://$work_dir/notifications.ipc" \
+    -i "1@hs${suffix}1" -i "2@hs${suffix}2" "$work_dir/hello.json" \
+    > "$work_dir/switch.log" 2>&1 &
+switch_pid=$!
 
-echo "=== ping test (should NOT succeed, because we reflect) ==="
-set +e
-ip netns exec h1 ping -W 1 -c 2 10.0.0.2
-echo
-echo "=== hexdump: h1 should see its own ICMP echoed back ==="
-ip netns exec h1 timeout 3 tcpdump -n -c 3 -i veth-h1 icmp || true
-set -e
+ready=0
+for (( attempt=0; attempt<100; attempt++ )); do
+    if ! kill -0 "$switch_pid" 2>/dev/null; then
+        echo "FAIL：BMv2 启动失败" >&2
+        exit 1
+    fi
+    if grep -q 'Thrift server was started' "$work_dir/switch.log"; then
+        ready=1
+        break
+    fi
+    sleep 0.1
+done
+if (( ! ready )); then
+    echo "FAIL：等待 BMv2 启动超时" >&2
+    exit 1
+fi
 
-echo
-echo "=== done. Press Ctrl+C to stop ==="
-wait "$BMV2_PID"
+python3 "$script_dir/verify.py" "$ns1" "$ns2"
+echo "PASS：两个端口的 Hello P4 反射验证完成"
+
+if (( keep )); then
+    echo "拓扑已保留，Ctrl+C 结束并清理。另开终端可执行："
+    echo "  sudo ip netns exec $ns1 tcpdump -Q in -n -e -i eth0 arp"
+    echo "  sudo ip netns exec $ns1 ping -c 2 -W 1 10.0.0.2"
+    echo "重新验证：sudo python3 $script_dir/verify.py $ns1 $ns2"
+    echo "BMv2 日志：$work_dir/switch.log（退出时删除）"
+    wait "$switch_pid"
+    echo "FAIL：BMv2 已退出" >&2
+    exit 1
+fi

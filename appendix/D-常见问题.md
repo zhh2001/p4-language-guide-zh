@@ -109,14 +109,13 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 检查：Ingress 里是否调用了 `hdr.vlan.setValid()`。
 `emit` 只输出 valid 的 header——忘 setValid 会被默默跳过。
 
-### D.2.6 报文只走一次就消失
+### D.2.6 报文没有从预期端口发出
 
-看是不是 `egress_spec == ingress_port` 导致被 BMv2 丢弃。BMv2 默认 **会丢掉出端口等于入端口的包**（"split horizon"）。
+BMv2 `simple_switch` 支持将普通报文从入端口发回。Ingress 中设置 `egress_spec = ingress_port` 就能实现 [Hello P4 示例](../examples/01-hello)的报文反射，无需额外的“关闭环回检查”选项。
 
-**解决**：
+先检查实际接口绑定、接口状态和出端口值，再确认后续逻辑是否重新标记了丢弃。抓包应区分发送与接收方向；只看到本机发出的帧不能证明它经过了交换机。
 
-- 如果是刻意反射，用 `recirculate()`
-- 或启动时加 `--no-loopback-check`
+`recirculate` 用于让报文再次进入处理流水线，与从端口发回报文是不同操作。具体报文路径见 [BMv2 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)。
 
 ## D.3 P4Runtime
 
