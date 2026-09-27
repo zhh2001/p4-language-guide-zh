@@ -58,10 +58,12 @@ TableEntry {
   table_id:     33576300
   match:        [ LPM("10.0.1.0/24") ]
   action:       { action_id: 16777217, params: [nh=0x0A000101, port=0x01] }
-  priority:     0          # ternary 才需要
+  priority:     0          # 本例只有 LPM，优先级为 0
   controller_metadata: 0
 }
 ```
+
+表的键包含 `ternary`、`range` 或 `optional` 时，P4Runtime 普通表项需要正整数优先级，数值较大者优先；表示默认动作的表项仍使用 0。这与 BMv2 `simple_switch_CLI` 的数值方向不同，见 [8.8.1 节](./08-匹配动作表.md#881-控制平面接口的数值方向)。
 
 ### 15.2.4 Stream Channel
 
@@ -73,13 +75,13 @@ TableEntry {
 
 ## 15.3 P4Runtime 的 RPC 方法
 
-| RPC | 作用 |
-| --- | ---- |
-| `Write` | 插入/修改/删除表项、counter reset、多播组等 |
-| `Read` | 查询表项/计数器/寄存器 |
-| `SetForwardingPipelineConfig` | 安装 P4 程序 |
-| `GetForwardingPipelineConfig` | 拿回当前 P4Info |
-| `StreamChannel` | 双向流：packet-in/out、arbitration |
+| RPC                           | 作用                                        |
+| ----------------------------- | ------------------------------------------- |
+| `Write`                       | 插入/修改/删除表项、counter reset、多播组等 |
+| `Read`                        | 查询表项/计数器/寄存器                      |
+| `SetForwardingPipelineConfig` | 安装 P4 程序                                |
+| `GetForwardingPipelineConfig` | 拿回当前 P4Info                             |
+| `StreamChannel`               | 双向流：packet-in/out、arbitration          |
 
 ## 15.4 安装 Python 客户端
 
@@ -254,7 +256,7 @@ for msg in stream:
 2. 控制平面收到，调用 Write RPC 把对应表项插回来
 3. 下一个同源 MAC 的包就能命中
 
-示例代码见 [`examples/02-l2-switch/runtime/learn.py`](../examples/02-l2-switch/runtime/learn.py)。
+上述流程需要额外实现控制器；当前 `examples/02-l2-switch` 未提供 `runtime/learn.py`。
 
 ## 15.8 多控制器与主备
 
@@ -267,22 +269,22 @@ P4Runtime 通过 **election_id** 选主。更大的 id = 主；从机会收到 `
 
 ## 15.9 常见陷阱
 
-| 问题 | 原因 | 解决 |
-| ---- | ---- | ---- |
-| `INVALID_ARGUMENT: match field length mismatch` | 字段字节数和 bitwidth 不匹配 | 注意字段要按 **big-endian 最小字节数** 编码 |
-| `FAILED_PRECONDITION: not primary` | election_id 不是最大 | 增大 id 重试 |
-| packet_in 收不到 | `@controller_header` 没设 / CPU port 没配 | 检查 Ingress 是否正确置 egress_spec |
-| 下发表项 `TABLE_ENTRY_DUPLICATE_ENTRY` | 已存在，应该用 `MODIFY` | 改 `u.type = u.MODIFY` |
+| 问题                                            | 原因                                      | 解决                                        |
+| ----------------------------------------------- | ----------------------------------------- | ------------------------------------------- |
+| `INVALID_ARGUMENT: match field length mismatch` | 字段字节数和 bitwidth 不匹配              | 注意字段要按 **big-endian 最小字节数** 编码 |
+| `FAILED_PRECONDITION: not primary`              | election_id 不是最大                      | 增大 id 重试                                |
+| packet_in 收不到                                | `@controller_header` 没设 / CPU port 没配 | 检查 Ingress 是否正确置 egress_spec         |
+| 下发表项 `TABLE_ENTRY_DUPLICATE_ENTRY`          | 已存在，应该用 `MODIFY`                   | 改 `u.type = u.MODIFY`                      |
 
 ## 15.10 P4Runtime vs Thrift CLI 选择
 
-| 维度 | P4Runtime | `simple_switch_CLI`（Thrift） |
-| ---- | --------- | ---------------------------- |
-| 标准化 | 是 | 仅 BMv2 |
-| 语言 | 任意 gRPC 客户端 | 仅 CLI |
-| 流式消息 | 支持 packet-in/out、digest | 支持，但不方便 |
-| 适合生产 | ✅ | ❌（调试用） |
-| 适合快速调试 | 一般 | ✅ |
+| 维度         | P4Runtime                  | `simple_switch_CLI`（Thrift） |
+| ------------ | -------------------------- | ----------------------------- |
+| 标准化       | 是                         | 仅 BMv2                       |
+| 语言         | 任意 gRPC 客户端           | 仅 CLI                        |
+| 流式消息     | 支持 packet-in/out、digest | 支持，但不方便                |
+| 适合生产     | ✅                          | ❌（调试用）                   |
+| 适合快速调试 | 一般                       | ✅                             |
 
 **推荐**：
 
