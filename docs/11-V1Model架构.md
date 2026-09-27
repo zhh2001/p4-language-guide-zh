@@ -139,7 +139,7 @@ apply {
 control Deparser<H>(packet_out b, in H hdr);
 ```
 
-注意：**Deparser 没有 metadata 参数**——元数据只存在于流水线内部，不会上线。
+V1Model 的 Deparser 接口没有独立的用户元数据参数，元数据也不会自动序列化。若需要将某个元数据值写入报文，可以在 Ingress 或 Egress 将它编码到已初始化的有效报头中，再由 Deparser 输出，见 [9.9 节](./09-Deparser反解析器.md#99-哪些数据会出现在输出中)。
 
 ## 11.4 `standard_metadata_t` 速查表
 
