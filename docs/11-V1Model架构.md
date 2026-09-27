@@ -156,7 +156,7 @@ struct standard_metadata_t {
     // 时间戳
     bit<32>  enq_timestamp;      // 进队列时间（us）
     bit<19>  enq_qdepth;         // 进队列时深度
-    bit<32>  deq_timedelta;      // 在队列中逗留时间（ns）
+    bit<32>  deq_timedelta;      // BMv2 中的排队时长（微秒）
     bit<19>  deq_qdepth;         // 离队列时深度
     bit<48>  ingress_global_timestamp;
     bit<48>  egress_global_timestamp;
@@ -185,7 +185,7 @@ struct standard_metadata_t {
 
 ### 11.4.2 特殊值
 
-- `egress_spec = 511` → drop（也可以用 `mark_to_drop(std_meta)`）
+- `simple_switch` 的丢包端口默认是 511，可用 `--drop-port` 修改；程序宜调用 `mark_to_drop(std_meta)`，见 [7.7 节](./07-控制块与动作.md#77-noaction-与-mark_to_drop)。
 - `mcast_grp > 0`  → 启用多播（端口由控制平面配置的 multicast group 决定）
 
 ## 11.5 V1Model 内置 action 与 extern
@@ -195,13 +195,10 @@ struct standard_metadata_t {
 ### 11.5.1 `mark_to_drop(std_meta)`
 
 ```p4
-action mark_to_drop(inout standard_metadata_t smeta) {
-    smeta.egress_spec = 511;
-    smeta.mcast_grp   = 0;
-}
+extern void mark_to_drop(inout standard_metadata_t standard_metadata);
 ```
 
-**比直接写 `std_meta.egress_spec = 511` 更清晰**。
+这是 `v1model.p4` 提供的 extern 函数，用户不需要重新定义。它设置目标的丢包端口值并清零 `mcast_grp`，但不会终止后续代码；如需同时停止当前控制调用链，可在调用后执行 `exit`。行为及适用范围见 [7.7 节](./07-控制块与动作.md#77-noaction-与-mark_to_drop)。
 
 ### 11.5.2 `verify_checksum` / `update_checksum`
 
