@@ -7,7 +7,7 @@
 V1Model 是 BMv2 `simple_switch` 使用的架构。流水线是**经典的 Ingress + Egress 两阶段**：
 
 ```text
-                     ingress_port         egress_spec      egress_port
+                    ingress_port         egress_spec      egress_port
                         │                    │                │
                         ▼                    ▼                ▼
 Packet ─► Parser ─► VerifyChk ─► Ingress ─► [TM] ─► Egress ─► ComputeChk ─► Deparser ─► Packet
@@ -20,14 +20,14 @@ Packet ─► Parser ─► VerifyChk ─► Ingress ─► [TM] ─► Egress �
 
 六个 **可编程** 块（白色）：
 
-| # | 块 | 职责 |
-| - | --- | ---- |
-| 1 | Parser                  | 解析报头 |
-| 2 | VerifyChecksum (简写 VC) | 校验入方向 checksum |
-| 3 | Ingress                 | 查表、选路由、设 egress |
-| 4 | Egress                  | 出方向处理（可选） |
-| 5 | ComputeChecksum (CC)     | 重新计算出方向 checksum |
-| 6 | Deparser                | 把 headers 写回字节流 |
+| #   | 块                       | 职责                    |
+| --- | ------------------------ | ----------------------- |
+| 1   | Parser                   | 解析报头                |
+| 2   | VerifyChecksum (简写 VC) | 校验入方向 checksum     |
+| 3   | Ingress                  | 查表、选路由、设 egress |
+| 4   | Egress                   | 出方向处理（可选）      |
+| 5   | ComputeChecksum (CC)     | 重新计算出方向 checksum |
+| 6   | Deparser                 | 把 headers 写回字节流   |
 
 黑盒：**Traffic Manager**（TM），架构提供，不可编程。负责队列、多播、drop、重新注入。
 
@@ -175,13 +175,13 @@ struct standard_metadata_t {
 
 ### 11.4.1 最常用的 5 个字段
 
-| 字段 | 读/写 | 说明 |
-| ---- | ---- | ---- |
-| `ingress_port` | 读 | 入端口；用在 ACL 的 key、SLA 统计 |
-| `egress_spec` | 写 | Ingress 里写它 = 决定报文去哪 |
-| `egress_port` | 读 | 到 Egress 阶段能看到真正的出端口 |
-| `parser_error` | 读 | parser 里 `verify` 失败时填入的错误 |
-| `packet_length` | 读 | 入包字节数（不含 CRC） |
+| 字段            | 读/写 | 说明                                                                                                                                                                        |
+| --------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ingress_port`  | 读    | 入端口；用在 ACL 的 key、SLA 统计                                                                                                                                           |
+| `egress_spec`   | 写    | Ingress 里写它 = 决定报文去哪                                                                                                                                               |
+| `egress_port`   | 读    | 到 Egress 阶段能看到真正的出端口                                                                                                                                            |
+| `parser_error`  | 读    | 解析错误，包括提取失败和 `verify` 失败；无错误时为 `error.NoError`。BMv2 不会仅因该字段记录了错误而自动丢包，处理方法见 [6.7 节](./06-Parser解析器.md#67-verify-与解析错误) |
+| `packet_length` | 读    | 入包字节数（不含 CRC）                                                                                                                                                      |
 
 ### 11.4.2 特殊值
 
@@ -272,14 +272,14 @@ digest<learn_t>(LEARN_RECEIVER, { hdr.ethernet.srcAddr, std_meta.ingress_port })
 
 ## 11.6 `instance_type` 值表
 
-| 值 | 含义 |
-| -- | ---- |
-| 0 | 正常包（从端口进来） |
-| 1 | Ingress 克隆（I2E） |
-| 2 | Egress 克隆（E2E） |
-| 3 | 由 `recirculate` 产生 |
-| 4 | 由 `resubmit` 产生 |
-| 5 | 由 replication（多播）产生 |
+| 值  | 含义                       |
+| --- | -------------------------- |
+| 0   | 正常包（从端口进来）       |
+| 1   | Ingress 克隆（I2E）        |
+| 2   | Egress 克隆（E2E）         |
+| 3   | 由 `recirculate` 产生      |
+| 4   | 由 `resubmit` 产生         |
+| 5   | 由 replication（多播）产生 |
 
 用这个字段可以判断一个包是不是"特殊来源"：
 
