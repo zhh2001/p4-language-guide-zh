@@ -193,5 +193,5 @@
 
 ## 扩展阅读
 
-- [P4_16 规范 v1.2.5](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)（第 3 节：术语与定义）
+- [P4_16 规范 v1.2.5](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)（第 2 节：术语与定义）
 - [P4Runtime 规范 v1.4.1](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)（第 2 节：术语与定义）
