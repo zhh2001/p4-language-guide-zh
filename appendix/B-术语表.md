@@ -91,7 +91,7 @@
 | Implicit cast  | 隐式转换      | P4 里很少                        |
 | Ingress        | 入方向 / 入向 |                                  |
 | INT            | 带内网络遥测  | 由 P4 激活的测量技术             |
-| Invalid header | 无效报头      | `setInvalid()` 后或从未 setValid |
+| Invalid header | 无效报头      | 有效位为 false；字段值不可依赖   |
 | Instantiation  | 实例化        | 对 package/control 进行 `name()` |
 
 ## L
