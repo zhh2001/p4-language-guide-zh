@@ -40,11 +40,11 @@ extern Counter {
 | `meter`           | 速率限制（token bucket） |
 | `direct_meter`    | 表直属 meter |
 | `register`        | 有状态可读可写的数组 |
-| `hash` / `Hash`   | 通用哈希函数 |
-| `checksum16`, `verify_checksum`, `update_checksum` | 校验和 |
+| `hash`           | 通用哈希函数 |
+| `verify_checksum`, `update_checksum` 及其 `_with_payload` 版本 | 校验和；旧 `Checksum16` 对象接口已弃用 |
 | `digest`          | 送一条消息到控制平面（学习用） |
 | `clone` / `clone_preserving_field_list` | 报文克隆/镜像 |
-| `recirculate` / `resubmit` | 重循环 / 重新提交 |
+| `recirculate_preserving_field_list` / `resubmit_preserving_field_list` | 重循环 / 重新提交 |
 | `random`          | 随机数 |
 
 下面按使用频率逐个讲。
@@ -183,11 +183,11 @@ hash(meta.ecmp_hash,
      32w8);                                             // max（桶数）
 ```
 
-结果 = `(crc32(data) % max) + base`。
+`max >= 1` 时，结果为 `(crc32(data) % max) + base`；`max == 0` 时，结果为 `base`。输出位宽须能容纳结果。
 
 ---
 
-## 12.8 `checksum16` / `verify_checksum` / `update_checksum`
+## 12.8 `verify_checksum` / `update_checksum`
 
 V1Model 用的是 **对称的 verify / update** 形式——我们已经在 [09 章](./09-Deparser反解析器.md) 和 [11 章](./11-V1Model架构.md) 看过。简单回顾：
 
@@ -199,7 +199,7 @@ verify_checksum(cond, data, checksum_field, algo);
 update_checksum(cond, data, checksum_field, algo);
 ```
 
-支持的 algo：`csum16` / `crc16` / `crc32` / `xor16`。
+`verify_checksum` 只能在 `VerifyChecksum` 中调用，第三个参数方向为 `in`；`update_checksum` 只能在 `ComputeChecksum` 中调用，第三个参数为 `inout`。验证失败通过 `checksum_error` 报告，不自动丢包。算法和位宽需检查目标支持，接口及覆盖范围见 [11.5.2 节](./11-V1Model架构.md#1152-校验和验证与更新)。
 
 VSS 架构则用 `Checksum16` 对象（手动 `.clear()` + `.update()` + `.get()`）——这是规范示例里的样式。
 
@@ -217,7 +217,7 @@ VSS 架构则用 `Checksum16` 对象（手动 `.clear()` + `.update()` + `.get()
 extern void digest<T>(in bit<32> receiver, in T data);
 ```
 
-- `receiver`：控制平面约定的 session ID
+- `receiver`：接收者参数；BMv2 的 V1Model 实现忽略其数值，不是镜像会话 ID
 - `data`：要上报的结构
 
 ### 12.9.3 示例
@@ -245,22 +245,26 @@ table smac_table {
 
 ## 12.10 `clone` / `clone_preserving_field_list`
 
-把一份报文副本送到指定 "mirror session"：
+请求按指定镜像会话生成副本。普通 I2E 克隆可在 Ingress 中调用，`session_id` 须事先定义并配置对应会话：
 
 ```p4
-// 在 Ingress 里镜像给 Egress
 clone(CloneType.I2E, session_id);
-
-// 带保留元数据
-@field_list(1)
-struct preserved_meta_t { bit<32> original_in_port; }
-
-clone_preserving_field_list(CloneType.I2E, session_id, 1);
 ```
+
+需要保留用户元数据时，应把 `@field_list` 标在实际元数据结构的字段上，例如：
+
+```p4
+struct metadata {
+    @field_list(1)
+    bit<9> original_in_port;
+}
+```
+
+Ingress 先设置 `meta.original_in_port`，再调用 `clone_preserving_field_list(CloneType.I2E, session_id, 1)`。保留值取自该次 Ingress 结束时，具体字节来源和 E2E 行为见 [11.5.5 节](./11-V1Model架构.md#1155-clone-与元数据保留)。
 
 - `CloneType.I2E` —— Ingress to Egress
 - `CloneType.E2E` —— Egress to Egress
-- mirror session 预先由控制平面配置（bmv2 的 `mc_mgrp_create_with_mgid`）
+- 镜像会话由控制平面配置；`simple_switch_CLI` 可用 `mirroring_add 100 3` 将会话 100 的副本送往端口 3，不能用创建多播组代替配置会话
 
 典型用途：抓包上送、INT 遥测、故障诊断。
 
@@ -270,7 +274,7 @@ clone_preserving_field_list(CloneType.I2E, session_id, 1);
 
 ### 12.11.1 `recirculate`
 
-在 Egress 结束后，把报文 **再送回 Ingress 重做一遍**：
+在 Egress 中请求重循环；未被丢弃时，报文经校验和更新和 Deparser 输出后，再从 Parser 开始处理：
 
 ```p4
 recirculate_preserving_field_list(1);
@@ -280,13 +284,13 @@ recirculate_preserving_field_list(1);
 
 ### 12.11.2 `resubmit`
 
-在 Ingress 阶段就把报文重新塞回 Ingress 起点（还没进 TM）：
+在 Ingress 中请求重提交；本轮 Ingress 结束后，使用本轮解析开始时的原报文字节重新进入 Parser，不保留 Ingress 对报头的修改：
 
 ```p4
 resubmit_preserving_field_list(1);
 ```
 
-开销比 recirculate 小。
+两个片段中的索引 1 用于选择用户元数据中带有 `@field_list(1)` 的字段。实际程序必须限制再次处理的次数，保留计数也不能被 Parser 无条件重新初始化。路径顺序与元数据保留规则见 [11.5.7 节](./11-V1Model架构.md#1157-重提交与重循环)。
 
 ---
 
