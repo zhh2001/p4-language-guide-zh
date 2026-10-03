@@ -1,57 +1,103 @@
 # 示例 02 · L2 静态转发交换机
 
-> 目标：实现一个最朴素的"按目的 MAC 转发"的 L2 交换机。未知目的 MAC 走广播。
+本例在 BMv2 `simple_switch` 上按目的 MAC 转发以太帧。已配置的单播地址对应一个输出端口。未知目的地址通过多播组泛洪到其他端口，目的 MAC 和负载保持不变。表项由控制平面预先写入，程序不学习源 MAC。
 
-对应教程：[docs/08-匹配动作表.md](../../docs/08-匹配动作表.md)、[docs/11-V1Model架构.md](../../docs/11-V1Model架构.md)。
+表与流水线的说明见[第 8 章](../../docs/08-匹配动作表.md)和[第 11 章](../../docs/11-V1Model架构.md)，工具使用见[第 14 章](../../docs/14-BMv2编译与运行.md)。
 
-## 拓扑
+## 拓扑与依赖
 
 ```text
- h1 (MAC ..01) ── port 1 ──┐
-                           │
- h2 (MAC ..02) ── port 2 ──┤  s1 (l2_switch.p4)
-                           │
- h3 (MAC ..03) ── port 3 ──┘
+h1 (10.0.0.1/24) ── 端口 1 ──┐
+h2 (10.0.0.2/24) ── 端口 2 ──┼── s1：l2_switch.p4
+h3 (10.0.0.3/24) ── 端口 3 ──┘
 ```
 
-三台主机、一个 BMv2 交换机。
+主机 MAC 依次为 `00:00:00:00:00:01`、`00:00:00:00:00:02`、`00:00:00:00:00:03`，各自位于独立的 network namespace 中，经 veth 接入交换机。主机侧接口均为 `eth0`，命名空间与交换机侧接口使用每次运行生成的名称。脚本不调用 Mininet。
 
-## 核心思路
+需要 `p4c-bm2-ss`、`simple_switch`、`simple_switch_CLI`、`ip`、`ping`、`timeout`，以及支持 `os.setns` 的 Linux Python 3.12+。逐帧验证只使用 Python 标准库。手工抓包另需 `tcpdump`。环境安装见[第 1 章](../../docs/01-环境搭建.md)。
 
-1. `dmac` 表以目的 MAC 做 exact 匹配；每条表项指向一个出端口
-2. 未命中时调用 `broadcast(mcast_grp=1)`，控制平面提前把多播组 1 注册成"发往所有其他端口"
-3. Egress 阶段 drop 掉 `ingress_port == egress_port` 的副本，避免广播回源
+## 转发与泛洪
 
-## 启动
+1. Parser 提取 14 字节以太网头。Ingress 检查 `parser_error` 和报头有效位，解析失败时显式丢弃。
+2. `dmac` 表按目的 MAC 精确匹配。`forward(port)` 选择单播端口，默认动作 `broadcast(1)` 选择多播组 1。
+3. 控制平面将组 1 配置为端口 1、2、3。复制后，每份报文进入 Egress。`egress_port == ingress_port` 的副本被丢弃，其余副本发往各自端口。
+
+组 1 的端口列表本身包含入端口，排除回源副本由 Egress 完成。这条判断也适用于普通单播：若目的 MAC 对应入端口，帧会被过滤。它不能消除多台交换机组成的二层环路，本例未实现生成树协议。
+
+泛洪不会把未知单播的目的 MAC 改成广播地址。命令文件还为 `ff:ff:ff:ff:ff:ff` 显式配置了组 1。该地址不限于 ARP。其他未配置的组播目的地址也会走默认泛洪，本例没有组播监听或 VLAN 隔离功能。
+
+IPv4、ARP 等内容保持为未解析的负载，由 BMv2 随以太网头一起输出。程序不修改 IP 字段，两个校验和控制块为空。这不表示它验证了 IPv4 或 TCP/UDP 校验和。报文复制与 Egress 的处理顺序见 [BMv2 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)。
+
+## 编译与运行
+
+以下命令从**仓库根目录**执行：
 
 ```bash
-./build.sh
-sudo ./run.sh
+bash examples/02-l2-switch/build.sh
+sudo bash examples/02-l2-switch/run.sh
 ```
 
-`run.sh` 会：
+`build.sh` 默认生成示例目录下的 `l2_switch.json` 和 `l2_switch.p4info.txtpb`，也可用第一个参数指定输出目录。此次实验通过 Thrift CLI 配置，P4Info 仅供查看。
 
-1. 建 3 个 netns + 对应 veth
-2. 启动 BMv2，并通过 `simple_switch_CLI` 下发：
-   - `dmac` 表项（h1/h2/h3 的 MAC → port）
-   - 多播组 1（端口 1, 2, 3）
-3. 运行 `h1 ping h2`、`h1 ping h3` 做验证
+`run.sh` 每次将当前源码编译到临时目录，再创建拓扑、启动交换机、等待 Thrift 服务、加载配置并验证转发。成功后自动退出，配置或验证失败则返回非零状态。它不复用示例目录中的旧 JSON。
 
-## 验证
+默认使用 Thrift 端口 9090。若该端口已占用，脚本在创建拓扑前退出。可为本次实例另选空闲端口：
 
-正常应当：
+```bash
+sudo env P4_L2_THRIFT_PORT=9091 bash examples/02-l2-switch/run.sh
+```
+
+## 配置文件的使用条件
+
+[runtime/s1-commands.txt](./runtime/s1-commands.txt)用于刚启动、尚未配置过的交换机。它建立组 1 和一个包含端口 1、2、3 的复制节点，再写入四条目的 MAC 表项，最后用 `table_dump`、`mc_dump` 读回配置。
 
 ```text
-=== h1 -> h2 ===
-64 bytes from 10.0.0.2: ...
-=== h1 -> h3 ===
-64 bytes from 10.0.0.3: ...
-=== broadcast works (arp flood) ===
-...
+mc_mgrp_create 1
+mc_node_create 0 1 2 3
+mc_node_associate 1 0
 ```
 
-## 练习
+`mc_node_create` 的第一个参数是 RID。`mc_node_associate` 的第二个参数是**节点句柄**。本机新实例中创建的第一个节点返回句柄 0，命令文件按这个条件编写。已有节点时必须使用实际返回的句柄，不能把 RID 当作句柄。配置文件也不能重复加载。
 
-- 扩展 `dmac` 表加 VLAN 维度：key 加 `vlan.vid : exact`
-- 把静态表项换成 **控制平面学习**：Ingress 里 `digest { src_mac, in_port }`，控制脚本监听 digest 消息并把条目写回 `dmac`（真正的 self-learning switch）
-- 把 "防止环路" 从 Egress 挪到 broadcast 动作里用 `egress_rid` 过滤
+本机 CLI 不识别 `#` 注释，空行还会重复上一条命令。`run.sh` 会先过滤整行注释和空行，再加载命令，并检查错误文本。手工加载时也应先过滤，不能直接使用 `simple_switch_CLI < runtime/s1-commands.txt`。CLI 退出码为 0 仍可能伴随逐条命令错误，需结合输出、配置读回和报文验证判断。
+
+## 自动验证
+
+[verify.py](./verify.py)从三台主机发送带随机标识的测试帧，排除本机发包记录，逐字节比较接收内容并统计每个端口的副本数：
+
+| 检查                | 输入与预期结果                                                         |
+| ------------------- | ---------------------------------------------------------------------- |
+| 静态单播，共 18 帧  | 六个有向主机对，各发送 60、128、1514 字节帧。只有目的主机收到一份      |
+| 同端口过滤，共 3 帧 | 各主机发送目的 MAC 为自身地址的帧。三个端口均不输出                    |
+| 未知单播，共 3 帧   | 各主机发送目的 MAC 为 `02:00:00:00:00:99` 的帧。另外两台主机各收到一份 |
+| 广播，共 3 帧       | 各主机发送广播帧。另外两台主机各收到一份                               |
+
+帧长不含 FCS。需要接收的用例最多等待 3 秒，收到全部预期副本后再观察 0.3 秒。预期丢弃的用例观察 0.3 秒。超时、内容变化、错误端口或重复副本都会使验证失败。这里检查的是观察窗口内的功能行为，不测吞吐量，也不能据此断言任意延迟的副本都不存在。
+
+随后脚本执行 h1→h2、h2→h3、h3→h1 的 ping，每对发送两次请求。未预设静态邻居项，ping 还会经过 ARP 解析。任何一组失败都会令脚本报错。全部通过后输出：
+
+```text
+PASS：L2 单播、泛洪、回源抑制和三对主机 ping 验证完成
+```
+
+## 手工观察与清理
+
+```bash
+sudo bash examples/02-l2-switch/run.sh --keep
+```
+
+自动验证通过后保留拓扑。脚本打印本次实例的命名空间、抓包与 ping 命令、CLI 连接端口、重新验证命令及日志路径。在 CLI 中可用 `table_dump MyIngress.dmac`、`mc_dump` 检查实际配置。
+
+观察 ARP 时，先启动抓包，再在对应主机中清除邻居缓存并发 ping。已有邻居项时，ping 不一定产生新的 ARP 请求。广播泛洪是否正确仍以逐帧验证为依据。
+
+正常退出、错误、SIGINT 或 SIGTERM 时，脚本停止自己启动的 BMv2，并清理本次记录的接口、命名空间和临时目录。`--keep` 模式下用 Ctrl+C 结束。手工启动的抓包程序应先停止。需要保留 JSON、P4Info 或日志时，在退出前复制临时目录中的文件。
+
+## 练习与适用范围
+
+- 增加显式丢弃表项，验证它只影响对应目的 MAC，且不会被默认泛洪覆盖。
+- 实现 MAC 学习时，结合[第 15 章](../../docs/15-P4Runtime控制平面.md#157-典型模式l2-学习)补充源地址上报、控制器接收、表项更新与老化。本目录不包含学习控制器。
+- 按 VLAN 隔离广播域时，需要同时补齐标签解析、有效性检查、匹配键与各 VLAN 的多播组，不能只增加一个未解析的字段。
+
+若希望在复制前排除入端口，可以由控制平面配置不同的端口集合，再在 Ingress 按入端口选择对应多播组。`egress_rid` 属于复制后的 Egress 上下文，不能移到 Ingress 的 `broadcast` 动作中筛选将来的副本。
+
+实测环境：Ubuntu 24.04 / WSL2，p4c `1.2.5.10`、BMv2 `1.15.0`、Python `3.12.3`。

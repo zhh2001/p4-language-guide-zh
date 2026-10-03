@@ -1,19 +1,21 @@
-# 静态 L2 表 + 多播组 1（端口 1,2,3）
-# 由 simple_switch_CLI 消费
+# 静态 L2 表 + 多播组 1。只向刚启动、尚未配置过的交换机加载一次。
+# run.sh 会先过滤注释和空行，再交给 CLI。不要直接重定向本文件。
+# 本机 BMv2 返回的第一个节点句柄为 0。已有配置时应使用实际返回的句柄。
 
-# --- 多播组 1：三个端口 ---
+# 节点的 RID 为 0，端口列表为 1、2、3。
+# mc_node_associate 的第二个参数是节点句柄，不是 RID。
 mc_mgrp_create 1
-mc_node_create 0 1
-mc_node_create 1 2
-mc_node_create 2 3
+mc_node_create 0 1 2 3
 mc_node_associate 1 0
-mc_node_associate 1 1
-mc_node_associate 1 2
 
 # --- 静态 L2 表 ---
 table_add MyIngress.dmac MyIngress.forward 00:00:00:00:00:01 => 1
 table_add MyIngress.dmac MyIngress.forward 00:00:00:00:00:02 => 2
 table_add MyIngress.dmac MyIngress.forward 00:00:00:00:00:03 => 3
 
-# ARP 广播地址专门配一条 (目的 MAC = FF:FF:FF:FF:FF:FF)
+# 广播目的 MAC 显式匹配。ARP 请求通常使用这个地址，但它不限于 ARP。
 table_add MyIngress.dmac MyIngress.broadcast ff:ff:ff:ff:ff:ff => 1
+
+# 未知目的 MAC 使用 P4 程序中的默认动作 broadcast(1)。
+table_dump MyIngress.dmac
+mc_dump

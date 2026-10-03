@@ -2,7 +2,8 @@
  * examples/02-l2-switch/l2_switch.p4
  *
  * 基于目的 MAC 做精确匹配的 L2 静态转发交换机。
- * 目的 MAC 未知时广播到所有端口（粗糙的 flood，仅用于教学）。
+ * 未命中的帧交给多播组 1，Egress 丢弃发回入端口的副本。
+ * 不学习源 MAC，也不实现 VLAN 隔离或生成树协议。
  *
  * 编译:  ./build.sh
  * 运行:  sudo ./run.sh
@@ -14,8 +15,6 @@
 /* ===== 类型 ===== */
 typedef bit<48> mac_t;
 typedef bit<9>  port_t;
-
-const bit<16> TYPE_IPV4 = 0x0800;
 
 header ethernet_t {
     mac_t   dst;
@@ -52,22 +51,21 @@ control MyIngress(inout headers hdr,
 
     table dmac {
         key = { hdr.ethernet.dst : exact; }
-        actions = { forward; broadcast; drop; NoAction; }
+        actions = { forward; broadcast; drop; }
         size = 4096;
-        default_action = NoAction;
+        default_action = broadcast(1);
     }
 
     apply {
-        if (hdr.ethernet.isValid()) {
-            if (!dmac.apply().hit) {
-                // 未命中 = 未学到，广播（控制平面预先配好 mcast_grp=1）
-                broadcast(1);
-            }
+        if (std.parser_error != error.NoError || !hdr.ethernet.isValid()) {
+            mark_to_drop(std);
+        } else {
+            dmac.apply();
         }
     }
 }
 
-/* ===== Egress：防止广播回源端口 ===== */
+/* ===== Egress：单播和多播均不发回入端口 ===== */
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t std) {
