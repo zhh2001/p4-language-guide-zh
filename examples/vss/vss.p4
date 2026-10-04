@@ -1,3 +1,7 @@
+// VSS architecture reference, based on P4_16 v1.2.5 Section 5.3.
+// This is a local reading example, not a BMv2 V1Model program.
+// See README.md for table configuration and TTL boundary conditions.
+
 // Include P4 core library
 #include <core.p4>
 
@@ -64,7 +68,8 @@ parser TopParser(packet_in b, out Parsed_packet p) {
         verify(p.ip.ihl == 4w5, error.IPv4OptionsNotSupported);
         ck.clear();
         ck.update(p.ip);
-        // Verify that packet checksum is zero
+        // Include the received checksum field. A valid header gives zero
+        // under the Internet-checksum semantics of the VSS extern.
         verify(ck.get() == 16w0, error.IPv4ChecksumError);
         transition accept;
     }
@@ -75,8 +80,10 @@ control TopPipe(inout Parsed_packet headers,
                 in error parseError,  // Parser error
                 in InControl inCtrl,  // Input port
                 out OutControl outCtrl) {
-    
-    IPv4Address nextHop;  // Local variable
+
+    // Initialize for static analysis. A successful Set_nhop must still
+    // supply the next-hop address before the dmac lookup.
+    IPv4Address nextHop = 0;
 
     /**
      * Indicates that a packet is dropped by setting the
@@ -107,8 +114,8 @@ control TopPipe(inout Parsed_packet headers,
     table ipv4_match {
         key = { headers.ip.dstAddr: lpm; }  // Longest-prefix match
         actions = {
-            Drop_action,
-            Set_nhop
+            Drop_action;
+            Set_nhop;
         }
         size = 1024;
         default_action = Drop_action;
@@ -116,17 +123,21 @@ control TopPipe(inout Parsed_packet headers,
 
     /**
      * Send the packet to the CPU port
+     * The VSS demux delivers the original input packet to the CPU.
      */
     action Send_to_cpu() {
         outCtrl.outputPort = CPU_OUT_PORT;
     }
 
     /**
-     * Check packet TTL and send to CPU if expired.
+     * Match TTL after Set_nhop has decremented it.
+     * The control plane must install 0 -> Send_to_cpu.
+     * An input TTL of 0 wraps to 255 before this table, so it needs
+     * separate handling when adapting this reference for deployment.
      */
     table check_ttl {
         key = { headers.ip.ttl: exact; }
-        actions = { Send_to_cpu, NoAction }
+        actions = { Send_to_cpu; NoAction; }
         const default_action = NoAction; // Defined in core.p4
     }
 
@@ -146,8 +157,8 @@ control TopPipe(inout Parsed_packet headers,
     table dmac {
         key = { nextHop: exact; }
         actions = {
-            Drop_action,
-            Set_dmac
+            Drop_action;
+            Set_dmac;
         }
         size = 1024;
         default_action = Drop_action;
@@ -167,8 +178,8 @@ control TopPipe(inout Parsed_packet headers,
     table smac {
         key = { outCtrl.outputPort: exact; }
         actions = {
-            Drop_action,
-            Set_smac
+            Drop_action;
+            Set_smac;
         }
         size = 16;
         default_action = Drop_action;
@@ -179,7 +190,10 @@ control TopPipe(inout Parsed_packet headers,
             Drop_action();  // Invoke drop directly
             return;
         }
-        ipv4_match.apply();  // Match result will go into nextHop
+        // Identify the executed action before using nextHop.
+        switch (ipv4_match.apply().action_run) {
+            Drop_action: { return; }
+        }
         if (outCtrl.outputPort == DROP_PORT) return;
         check_ttl.apply();
         if (outCtrl.outputPort == CPU_OUT_PORT) return;

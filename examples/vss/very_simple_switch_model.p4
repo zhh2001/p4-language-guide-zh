@@ -1,4 +1,8 @@
-// Very Simple Switch P4 declaration
+// VSS architecture interfaces, based on P4_16 v1.2.5 Section 5.1.
+// These declarations do not implement a target or the Checksum16 extern.
+
+#ifndef P4_GUIDE_VERY_SIMPLE_SWITCH_MODEL_P4
+#define P4_GUIDE_VERY_SIMPLE_SWITCH_MODEL_P4
 
 #include <core.p4>
 
@@ -68,7 +72,7 @@ package VSS<H>(Parser<H> p,
 
 // Architecture-specific objects that can be instantiated
 
-// Checksum unit
+// Internet checksum unit supplied by a VSS target.
 extern Checksum16 {
     Checksum16();  // Constructor
     void clear();  // Prepare unit for computation
@@ -76,3 +80,5 @@ extern Checksum16 {
     void remove<T>(in T data);  // Remove data from existing checksum
     bit<16> get();  // Get the checksum for the data added since last clear
 }
+
+#endif
