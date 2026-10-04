@@ -154,7 +154,7 @@ meter_set_rates MyIngress.per_flow_meter 0 0.001:10 0.002:20
 | `simple_switch_CLI`     | 报文／微秒               | 字节／微秒             |
 | P4Runtime `MeterConfig` | 报文／秒                 | 字节／秒               |
 
-突发容量分别以报文数或字节数表示。单位依据 [BMv2 CLI 文档](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/runtime_CLI.md#meter_set_rates)和 [P4Runtime 规范](https://p4.org/wp-content/uploads/sites/53/2024/10/P4Runtime-Spec-v1.4.1.html)。不要把 CLI 中的小数速率原样写入 P4Runtime 配置。
+突发容量分别以报文数或字节数表示。单位依据 [BMv2 CLI 文档](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/runtime_CLI.md#meter_set_rates) 和 [P4Runtime 规范](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)。不要把 CLI 中的小数速率原样写入 P4Runtime 配置。
 
 本机未配置的 meter 返回绿色；这不代表已经建立限速策略。验证时应明确配置参数，分别检查颜色和程序据此采取的操作，不能仅凭报文能通过就认为计量器有效。
 

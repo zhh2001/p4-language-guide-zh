@@ -2,13 +2,13 @@
 
 > 本章目标：区分 PSA、TNA、PNA 的适用范围，理解架构迁移时需要核对的接口与报文语义，并在 BMv2 上运行一个完整的 PSA 程序。
 
-本章以 [PSA 1.2](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PSA-v1.2.html)和 [PNA 0.7](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PNA-v0.7.html)为参考。PSA 实验使用 p4c `1.2.5.10` 和 BMv2 `1.15.0`。TNA 部分核对公开接口与工具链说明，不包含 Tofino 硬件实测。
+本章以 [PSA 1.2](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PSA-v1.2.html) 和 [PNA 0.7](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PNA-v0.7.html)为参考。PSA 实验使用 p4c `1.2.5.10` 和 BMv2 `1.15.0`。TNA 部分核对公开接口与工具链说明，不包含 Tofino 硬件实测。
 
 ## 16.1 为什么要了解其他架构
 
 V1Model 提供了本教程前面使用的 Parser、控制块、校验和块、Deparser 和 extern 接口。它沿用了 P4_14 的交换机处理模型，在 BMv2 上有明确的实现语义，适合学习和软件实验。`digest`、克隆等接口的细节见[第 11 章](11-V1Model架构.md)和[第 12 章](12-外部对象Extern.md)。
 
-P4_16 将语言与架构分开，迁移前需要回答三个问题：
+P4<sub>16</sub> 将语言与架构分开，迁移前需要回答三个问题：
 
 1. 目标编译器接受哪一种架构、哪一版头文件？
 2. 该实现支持哪些报文路径、extern 和控制平面操作？
@@ -100,7 +100,7 @@ Extern 的可调用位置属于架构约束。例如，PSA 的 `Digest` 位于 *
 | 摘要           | `digest<T>(receiver, data)`                                        | `Digest<T>` 实例及 `pack(data)`，调用位置不同       |
 | 本机编译、执行 | `p4c-bm2-ss`、`simple_switch` / `simple_switch_grpc`               | `p4c-bm2-psa`、`psa_switch`                         |
 
-P4Runtime 是控制平面协议，与架构不是同一个层次。不能因为程序使用 PSA，就推断某个目标一定提供 P4Runtime 服务或完整支持所有实体；V1Model 的 `simple_switch_grpc` 也可以提供 P4Runtime。本机 `psa_switch` 实验使用文件收发，不使用第 15 章的 gRPC 客户端。BMv2 的目标区别见[官方说明](https://github.com/p4lang/behavioral-model/blob/main/targets/README.md)。
+P4Runtime 是控制平面协议，与架构不是同一个层次。不能因为程序使用 PSA，就推断某个目标一定提供 P4Runtime 服务或完整支持所有实体；V1Model 的 `simple_switch_grpc` 也可以提供 P4Runtime。本机 `psa_switch` 实验使用文件收发，不使用第 15 章的 gRPC 客户端。BMv2 的目标区别见[官方说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/targets/README.md)。
 
 ## 16.4 TNA：面向 Tofino 的架构
 
@@ -127,11 +127,11 @@ TNA 的 `Register<T, I>` 与 `RegisterAction<T, I, U>` 需要一起理解：后�
 - **字段与状态资源**：报文头向量（PHV）的空间和访问方式、状态 ALU 能执行的操作，都会影响程序能否映射。
 - **解析与反解析能力**：可解析的深度、提取方式和输出格式有目标限制。反复 recirculate 还会增加内部处理流量，影响吞吐与时延。
 
-不能把语言限制和芯片限制混在一起。例如 P4_16 没有浮点类型，不能期待把通用浮点算法直接搬入数据平面；运行时算术支持则要逐项查目标。常量表达式能被编译器求值，也不代表芯片可以逐包执行相同运算。资源不足、依赖无法满足和不支持的操作都可能导致编译失败，应按诊断与资源报告判断原因。
+不能把语言限制和芯片限制混在一起。例如 P4<sub>16</sub> 没有浮点类型，不能期待把通用浮点算法直接搬入数据平面；运行时算术支持则要逐项查目标。常量表达式能被编译器求值，也不代表芯片可以逐包执行相同运算。资源不足、依赖无法满足和不支持的操作都可能导致编译失败，应按诊断与资源报告判断原因。
 
 ### 16.4.3 公开工具链与硬件部署
 
-截至 2026/10/03，p4c 已公开 Tofino 后端与架构头文件。[Open P4Studio](https://github.com/p4lang/open-p4studio) 提供可构建的模型代码、运行模型所需的驱动、BF Runtime 接口及示例。学习 TNA 可以从这些公开代码入手。BF Runtime 与第 15 章的 P4Runtime 是不同的控制平面接口，客户端与对象描述需要分别处理。
+本章引用的 p4c 提交包含公开的 Tofino 后端与架构头文件。[Open P4Studio 的项目说明](https://github.com/p4lang/open-p4studio/blob/36838d82a59b0334d9368d6401c4ed6bd5fee214/README.md)介绍了可构建的模型代码、运行模型所需的驱动、BF Runtime 接口及示例。学习 TNA 可以从这些公开代码入手。BF Runtime 与第 15 章的 P4Runtime 是不同的控制平面接口，客户端与对象描述需要分别处理。
 
 运行模型与部署到交换机仍有不同条件。该仓库说明硬件需要额外的 BSP、SerDes 驱动等组件，并公告 Intel 自 **2026-01-01** 起停止批准此类新的访问申请。实际部署应核对已有软件授权、设备厂商提供的组件及其版本兼容性；公开源码的可用性并不等于硬件交付条件已经满足。
 
@@ -333,7 +333,7 @@ python3 build/ch16/verify_pair.py
 | Linux 内核报文处理     | p4c 的 eBPF 后端及其支持的架构 | TC/XDP 位置、内核能力、加载器与 verifier 限制 |
 | DPDK 用户态处理        | `p4c-dpdk` 的 PSA/PNA 支持     | DPDK SWX 运行环境、后端特性与版本限制         |
 
-例如，p4c 的 [PSA/eBPF 实现](https://github.com/p4lang/p4c/blob/main/backends/ebpf/psa/README.md)区分 TC 与 XDP 路径，两者支持范围不同；[DPDK 后端文档](https://p4lang.github.io/p4c/dpdk_backend.html)则列出了 PSA/PNA 输入及尚不支持的功能。后端能接受某种架构的程序，不足以证明它实现了规范的每一种行为。
+例如，本章所用 p4c 提交中的 [PSA/eBPF 实现](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/backends/ebpf/psa/README.md)区分 TC 与 XDP 路径，两者支持范围不同。[DPDK 后端文档](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/backends/dpdk/README.md)则列出了 PSA/PNA 输入及尚不支持的功能。后端能接受某种架构的程序，不足以证明它实现了规范的每一种行为。
 
 本教程保留 V1Model 作为主要实验架构。迁移是否值得，取决于实际目标与需求；验证工作除了改写接口，还包括报文内容、状态访问、控制平面和资源使用。
 
@@ -342,7 +342,7 @@ python3 build/ch16/verify_pair.py
 - [PSA 1.2 规范](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PSA-v1.2.html)：核对报文路径、元数据初值、extern 与固定功能块。
 - [p4c 的 BMv2 PSA 接口](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/p4include/bmv2/psa.p4)：对应本章实验所用编译器版本。
 - [PNA 0.7 草案](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PNA-v0.7.html)：阅读 NIC 路径、主机接口与加速器模型。
-- [p4c Tofino 后端](https://github.com/p4lang/p4c/tree/main/backends/tofino)：阅读公开架构接口、编译器实现和资源映射代码。
+- [p4c Tofino 后端](https://github.com/p4lang/p4c/tree/8b6de3c579e717ee278c38041b868e9ef2345f5f/backends/tofino)：阅读公开架构接口、编译器实现和资源映射代码。
 - [Open P4Studio](https://github.com/p4lang/open-p4studio)：核对模型、驱动、示例和硬件部署的附加条件。
 
 ## 16.9 本章小结

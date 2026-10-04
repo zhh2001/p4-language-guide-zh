@@ -1,12 +1,12 @@
 # 09 · Deparser 反解析器
 
-本章介绍 `packet_out.emit` 如何把报头序列化为输出数据，以及它与有效位、未解析负载和校验和的关系。语言规则依据 [P4_16 规范 v1.2.5 第 16 节](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html#sec-deparse)。本机验证使用 p4c 1.2.5.10（`8b6de3c57`）和 `simple_switch` 1.15.0-2bdd0b7b。
+本章介绍 `packet_out.emit` 如何把报头序列化为输出数据，以及它与有效位、未解析负载和校验和的关系。语言规则依据 P4<sub>16</sub> 规范 v1.2.5 第 16 节。本机验证使用 p4c 1.2.5.10 和 `simple_switch` 1.15.0。
 
 前面的代码片段采用 9.6 节中的 Ethernet、VLAN 类型和 V1Model 接口。涉及 IPv4 等其他报头时，另行说明类型和适用范围。
 
 ## 9.1 Deparser 的职责
 
-P4_16 没有专用的 `deparser` 关键字。反解析由带 `packet_out` 参数的控制块完成，具体接口由架构规定。它按照程序指定的顺序输出有效报头，而不是自动把 Parser 的操作倒放一遍。
+P4<sub>16</sub> 没有专用的 `deparser` 关键字。反解析由带 `packet_out` 参数的控制块完成，具体接口由架构规定。它按照程序指定的顺序输出有效报头，而不是自动把 Parser 的操作倒放一遍。
 
 对于本章的 BMv2 `simple_switch` 普通报文路径，输出由两部分组成：
 
@@ -240,7 +240,7 @@ p4c-bm2-ss --std p4-16 --arch v1model -o deparser-demo.json deparser-demo.p4
 
 ## 9.7 Deparser 中能写哪些逻辑
 
-从语言上看，Deparser 是控制块；实际允许的语句由架构和目标进一步约束。对于本机 V1Model／BMv2，应使用直接、顺序的 `packet.emit(...)` 调用，参见 [BMv2 的 Deparser 限制](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md#restrictions-on-code-in-the-deparser-control)。
+从语言上看，Deparser 是控制块，实际允许的语句由架构和目标进一步约束。对于本机 V1Model／BMv2，应使用直接、顺序的 `packet.emit(...)` 调用，参见 [BMv2 的 Deparser 限制](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md#restrictions-on-code-in-the-deparser-control)。
 
 本机编译验证中，运行时 `if`、表应用以及把 `emit` 包装进动作后调用，均被 BMv2 后端拒绝。即使只是 `if (hdr.vlan.isValid())` 也不能据此绕开目标限制；直接 `emit(hdr.vlan)` 已经会跳过无效报头。
 

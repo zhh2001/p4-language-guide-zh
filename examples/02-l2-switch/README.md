@@ -26,7 +26,7 @@ h3 (10.0.0.3/24) ── 端口 3 ──┘
 
 泛洪不会把未知单播的目的 MAC 改成广播地址。命令文件还为 `ff:ff:ff:ff:ff:ff` 显式配置了组 1。该地址不限于 ARP。其他未配置的组播目的地址也会走默认泛洪，本例没有组播监听或 VLAN 隔离功能。
 
-IPv4、ARP 等内容保持为未解析的负载，由 BMv2 随以太网头一起输出。程序不修改 IP 字段，两个校验和控制块为空。这不表示它验证了 IPv4 或 TCP/UDP 校验和。报文复制与 Egress 的处理顺序见 [BMv2 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)。
+IPv4、ARP 等内容保持为未解析的负载，由 BMv2 随以太网头一起输出。程序不修改 IP 字段，两个校验和控制块为空。这不表示它验证了 IPv4 或 TCP/UDP 校验和。报文复制与 Egress 的处理顺序见 [11.5.8 节](../../docs/11-V1Model架构.md#1158-多种请求同时出现时)。
 
 ## 编译与运行
 

@@ -2,13 +2,13 @@
 
 ## C.1 官方规范与参考
 
-| 资料                                                                                                                | 本教程采用的版本 | 查阅用途                                            |
-| ------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------- |
-| [P4<sub>16</sub> Language Specification](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html) | 1.2.5            | 类型、表达式、Parser、Control、表和核心库的语言语义 |
-| [P4Runtime Specification](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)                       | 1.4.1            | P4Info、实体读写、仲裁、流水线配置与异步消息        |
-| [PSA Specification](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PSA-v1.2.html)                          | 1.2              | 可移植交换机架构的接口、报文路径与 extern 行为      |
-| [PNA Specification](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PNA-v0.7.html)                          | 0.7，工作草案    | 面向网卡的可编程块、接口与处理流程                  |
-| [BMv2 `simple_switch` 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)             | 随实现更新       | V1Model 元数据、丢弃、复制、重提交等目标行为        |
+| 资料                                                                                                                                        | 本教程采用的版本    | 查阅用途                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------- |
+| [P4<sub>16</sub> Language Specification](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)                         | 1.2.5               | 类型、表达式、Parser、Control、表和核心库的语言语义 |
+| [P4Runtime Specification](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)                                               | 1.4.1               | P4Info、实体读写、仲裁、流水线配置与异步消息        |
+| [PSA Specification](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PSA-v1.2.html)                                                  | 1.2                 | 可移植交换机架构的接口、报文路径与 extern 行为      |
+| [PNA Specification](https://p4.org/wp-content/uploads/sites/53/p4-spec/docs/PNA-v0.7.html)                                                  | 0.7，工作草案       | 面向网卡的可编程块、接口与处理流程                  |
+| [BMv2 `simple_switch` 说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md) | 实测提交 `2bdd0b7b` | V1Model 元数据、丢弃、复制、重提交等目标行为        |
 
 需要了解规范后续变化时，可从 [P4 规范目录](https://p4.org/specifications/)查找版本，或阅读 [P4<sub>16</sub> 工作草案](https://p4lang.github.io/p4-spec/docs/P4-16-working-spec.html)。工作草案可能包含正式版本尚未收录的内容。语言规范的修订号、架构版本与 `p4c --version` 的输出需要分别记录。
 
@@ -54,7 +54,7 @@
 - Changhoon Kim 等：[In-band Network Telemetry via Programmable Dataplanes](https://nkatta.github.io/papers/int-demo.pdf)，*SIGCOMM 2015* 产业演示（作者稿）。展示用 P4 采集交换机内部状态、定位时延问题的早期方案。其工具与报文格式具有历史背景。
 - Shaofei Tang 等：[Sel-INT: A Runtime-Programmable Selective In-Band Network Telemetry System](https://doi.org/10.1109/TNSM.2019.2953327)，*IEEE Transactions on Network and Service Management*，17(2): 708–721，2020，DOI：`10.1109/TNSM.2019.2953327`。研究遥测采样与数据类型的运行时选择，原型基于 POF 和扩展的 Open vSwitch，可用于比较遥测设计，不能当作现成的 P4 实验。
 
-查找其他论文可使用 [P4 Publications](https://p4.org/publications/)，正式引用仍应核对出版方或论文首页。实现 INT 时可从 [p4-applications 的遥测规范目录](https://github.com/p4lang/p4-applications/tree/master/telemetry/specs)查找格式定义，并记录采用的规范版本。
+查找其他论文可使用 [P4 Publications](https://p4.org/publications/)，正式引用仍应核对出版方或论文首页。实现 INT 时可从 [p4-applications 的遥测规范目录](https://github.com/p4lang/p4-applications/tree/7eedb79d40e60ceb6d87f1a3682f75c28fc2b2ba/telemetry/specs)查找格式定义，并记录采用的规范版本。
 
 ## C.4 代码仓库
 
@@ -69,13 +69,13 @@
 
 ### 控制平面与测试
 
-| 仓库                                                                         | 用途与使用条件                                                                    |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [p4lang/p4runtime](https://github.com/p4lang/p4runtime)                      | P4Runtime 规范及 protobuf 接口定义。客户端绑定、协议版本和服务端能力需要配套核对  |
-| [p4lang/p4runtime-shell](https://github.com/p4lang/p4runtime-shell)          | 交互式 P4Runtime 客户端，适合检查表项和其他实体。需要目标提供 P4Runtime 服务      |
-| [opennetworkinglab/onos](https://github.com/opennetworkinglab/onos)          | 包含 P4Runtime 南向接口的 SDN 控制器。设备接入还需要与流水线对应的驱动和 pipeconf |
-| [p4lang/ptf](https://github.com/p4lang/ptf)                                  | Packet Test Framework，用于组织发包与期望报文检查。控制平面配置由测试程序安排     |
-| [p4c 中的 P4Tools](https://github.com/p4lang/p4c/tree/main/backends/p4tools) | 包括测试生成器 P4Testgen、随机程序生成器 P4Smith。需要相应构建选项及目标支持      |
+| 仓库                                                                                                             | 用途与使用条件                                                                    |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [p4lang/p4runtime](https://github.com/p4lang/p4runtime)                                                          | P4Runtime 规范及 protobuf 接口定义。客户端绑定、协议版本和服务端能力需要配套核对  |
+| [p4lang/p4runtime-shell](https://github.com/p4lang/p4runtime-shell)                                              | 交互式 P4Runtime 客户端，适合检查表项和其他实体。需要目标提供 P4Runtime 服务      |
+| [opennetworkinglab/onos](https://github.com/opennetworkinglab/onos)                                              | 包含 P4Runtime 南向接口的 SDN 控制器。设备接入还需要与流水线对应的驱动和 pipeconf |
+| [p4lang/ptf](https://github.com/p4lang/ptf)                                                                      | Packet Test Framework，用于组织发包与期望报文检查。控制平面配置由测试程序安排     |
+| [p4c 中的 P4Tools](https://github.com/p4lang/p4c/tree/8b6de3c579e717ee278c38041b868e9ef2345f5f/backends/p4tools) | 包括测试生成器 P4Testgen、随机程序生成器 P4Smith。需要相应构建选项及目标支持      |
 
 ### 研究应用
 
@@ -103,7 +103,7 @@
 
 从软件实验转向硬件时，可先阅读以下公开项目：
 
-- [Open P4Studio](https://github.com/p4lang/open-p4studio)：提供 Tofino 模型、驱动、BF Runtime 接口及测试示例。运行模型与实机部署所需的组件不同。仓库说明实机还需要 BSP、SerDes 驱动等，并公告 Intel 自 2026-01-01 起停止批准相关的新访问申请。应结合已有授权与设备厂商提供的软件核对部署条件，详见[第 16 章](../docs/16-PSA与TNA简介.md)。
+- [Open P4Studio](https://github.com/p4lang/open-p4studio)：提供 Tofino 模型、驱动、BF Runtime 接口及测试示例。运行模型与实机部署所需的组件不同。实机所需附加组件、访问公告及其出处见 [16.4.3 节](../docs/16-PSA与TNA简介.md#1643-公开工具链与硬件部署)。部署前应结合已有授权与设备厂商提供的软件核对条件。
 - [stratum/fabric-tna](https://github.com/stratum/fabric-tna)：SD-Fabric 的数据平面程序及 ONOS pipeconf、PTF 测试，涉及 TNA、Stratum 与 ONOS 的配合。仓库另含用于开发测试的 V1Model 版本。复现前应查看其 SDE、控制器及构建依赖要求。
 
 选择具体设备时，需查清芯片型号、支持的架构、编译器版本、控制接口和 SDK 获取条件。产品采用可编程数据平面，并不必然向用户开放 P4 编译和部署接口。软件模型的功能验证也不能替代实机的资源与性能测试。
@@ -142,6 +142,6 @@
 
 1. [P4<sub>16</sub> 规范 v1.2.5](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)：核对语言语义。
 2. [p4lang/tutorials](https://github.com/p4lang/tutorials)：按练习学习和验证行为。
-3. [BMv2 `simple_switch` 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)：核对本教程目标的处理规则。
+3. [BMv2 `simple_switch` 说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md)：核对本教程目标的处理规则。
 4. [P4Runtime 规范 v1.4.1](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)：核对控制协议。
 5. [P4 Forum](https://forum.p4.org/)：查找使用问题与社区讨论。

@@ -99,7 +99,7 @@ BMv2 `simple_switch` **可以使用端口 0**。V1Model 常用 9 位端口字段
 - 将 `egress_spec` 设为 0 是选择端口 0，不能当作“清空即丢弃”。
 - 克隆、重提交和多播有各自的处理顺序，单看原报文的一个字段不能判断所有副本的去向。
 
-本机实测中，调用 `mark_to_drop` 后再设置普通输出端口，报文仍可转发。将丢弃端口改为 509 后，绑定端口 511 也可正常输出。完整顺序见 [BMv2 报文处理说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md)。
+本机实测中，调用 `mark_to_drop` 后再设置普通输出端口，报文仍可转发。将丢弃端口改为 509 后，绑定端口 511 也可正常输出。完整顺序见 [11.5.8 节](../docs/11-V1Model架构.md#1158-多种请求同时出现时)。
 
 ### D.2.3 CLI 找不到表或动作
 
@@ -290,7 +290,7 @@ h1 python3 build/appendix-d/send_probe.py
 
 该解释器须已安装 Scapy。`sendp` 按二层发送，目的 MAC 由脚本指定。使用其他拓扑时需同步修改地址与接口，不能期待它自动完成路由或 ARP。
 
-若修改的是从 PCAP 解析出的报文，原校验和值通常已经存在。需要 Scapy 在序列化时重新计算时，应删除受影响层的校验和字段。IP 地址或负载变化还可能影响传输层校验和及长度。具体行为见 [Scapy 使用文档](https://scapy.readthedocs.io/en/latest/usage.html)。
+若修改的是从 PCAP 解析出的报文，原校验和值通常已经存在。需要 Scapy 在序列化时重新计算时，应删除受影响层的校验和字段。IP 地址或负载变化还可能影响传输层校验和及长度。本机 Scapy 2.5.0 的 [IP、TCP、UDP 序列化实现](https://github.com/secdev/scapy/blob/v2.5.0/scapy/layers/inet.py)仅在 `chksum` 为 `None` 时自动计算相应校验和。
 
 ### D.4.4 定位“有入口包，没有出口包”
 

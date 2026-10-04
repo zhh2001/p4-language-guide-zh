@@ -20,7 +20,7 @@ flowchart LR
 
 这个图只展示一种解析策略。`accept` 表示解析成功结束，不表示整份报文已被读完，也不表示所有协议约束都已校验。`reject` 表示解析失败，后续是否丢包由架构和程序决定。
 
-在 BMv2 的 V1Model 流水线中，解析错误通过 `standard_metadata_t.parser_error` 传给后续处理块，报文仍会进入 Ingress。若希望丢弃解析失败的报文，程序必须检查这个字段并执行丢包操作，见 6.7 节和 [BMv2 的 Parser 说明](https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md#restrictions-on-parser-code)。
+在 BMv2 的 V1Model 流水线中，解析错误通过 `standard_metadata_t.parser_error` 传给后续处理块，报文仍会进入 Ingress。若希望丢弃解析失败的报文，程序必须检查这个字段并执行丢包操作，见 6.7 节和 [BMv2 的 Parser 说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md#restrictions-on-parser-code)。
 
 ## 6.2 Parser 的结构
 
