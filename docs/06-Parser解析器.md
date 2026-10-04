@@ -1,6 +1,6 @@
 # 06 · Parser 解析器
 
-本章讨论 Parser 如何读取报文、选择解析路径和报告错误。语言规则以 [P4_16 规范 v1.2.5](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html) 为依据；涉及 V1Model 与 BMv2 时，另行说明目标行为。本机验证使用 p4c 1.2.5.10 和 `simple_switch` 1.15.0-2bdd0b7b。
+本章讨论 Parser 如何读取报文、选择解析路径和报告错误。语言规则以 P4<sub>16</sub> 规范 v1.2.5 为依据；涉及 V1Model 与 BMv2 时，另行说明目标行为。本机验证使用 p4c 1.2.5.10 和 `simple_switch` 1.15.0
 
 前半章的代码是片段，需要补齐类型、状态和架构接口。6.14 节给出可独立编译的完整 V1Model 程序。
 
@@ -388,7 +388,7 @@ parser CountBytes(packet_in packet, out bit<8> count) {
 
 局部变量在 Parser 的一次调用中保存值，不是跨报文的计数器；上例每次成功调用都输出 1。状态内声明的名字只在相应块内可见。实例化的 extern 是否有跨调用状态、能在哪些块中使用，由它的接口和架构规定。
 
-`Checksum16` 是某些架构示例定义的 extern，不是 `core.p4` 或 V1Model 提供的通用接口。不能把它直接复制到本章的 V1Model 程序中；校验和处理见 [第 12 章](./12-外部对象Extern.md)。
+`core.p4` 不定义 `Checksum16`。[VSS 参考示例](../examples/vss/README.md#解析与校验和)中的同名对象提供 `clear`、`update`、`remove` 和无参数的 `get()`。本机 V1Model 头文件则保留了已弃用的 `Checksum16.get(data)`，两者接口不同。本章的 V1Model 程序应在相应校验和控制块中使用 `verify_checksum`、`update_checksum`，见 [12.8 节](./12-外部对象Extern.md#128-校验和接口)。
 
 ## 6.13 可用操作与限制
 

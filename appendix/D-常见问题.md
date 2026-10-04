@@ -2,7 +2,7 @@
 
 本附录按编译、交换机运行和控制接口分层排查。命令从仓库根目录执行。复核环境为 p4c `1.2.5.10`、BMv2 `1.15.0`。接口名、监听端口和 Python 环境应与自己的实验一致。
 
-语言规则依据 [P4<sub>16</sub> v1.2.5](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)，控制协议依据 [P4Runtime v1.4.1](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)。涉及 BMv2 的结论限定于对应目标。完整环境检查见[第 1 章](../docs/01-环境搭建.md)，流水线启动与控制器示例分别见[第 14 章](../docs/14-BMv2编译与运行.md)和[第 15 章](../docs/15-P4Runtime控制平面.md)。
+语言规则依据 P4<sub>16</sub> v1.2.5，控制协议依据 P4Runtime v1.4.1。涉及 BMv2 的结论限定于对应目标。完整环境检查见[第 1 章](../docs/01-环境搭建.md)，流水线启动与控制器示例分别见[第 14 章](../docs/14-BMv2编译与运行.md)和[第 15 章](../docs/15-P4Runtime控制平面.md)。
 
 ## D.1 编译期
 
@@ -103,7 +103,13 @@ BMv2 `simple_switch` **可以使用端口 0**。V1Model 常用 9 位端口字段
 
 ### D.2.3 CLI 找不到表或动作
 
-先确认 Thrift 端口连接的是预期交换机，再检查实际加载的表。以仓库 L2 示例为例：
+先确认 Thrift 端口连接的是预期交换机，再检查实际加载的表。以仓库 L2 示例为例，先运行并保留拓扑：
+
+```bash
+sudo bash examples/02-l2-switch/run.sh --keep
+```
+
+然后在另一终端连接脚本打印的 Thrift 端口。默认端口为 9090：
 
 ```bash
 simple_switch_CLI --thrift-port 9090
@@ -117,7 +123,7 @@ table_info MyIngress.dmac
 table_dump MyIngress.dmac
 ```
 
-全限定名便于消除歧义，但本机 CLI 也接受**唯一的名称后缀**，例如没有同名冲突时可使用 `dmac`。出现歧义、加载了旧 JSON、连错实例，或对象因未使用而被编译器消除，都可能导致名称不可用。
+完全限定名便于消除歧义，但本机 CLI 也接受**唯一的名称后缀**，例如没有同名冲突时可使用 `dmac`。出现歧义、加载了旧 JSON、连错实例，或对象因未使用而被编译器消除，都可能导致名称不可用。默认运行不加 `--keep` 时，验证结束就会停止交换机，之后无法再连接该实例。
 
 ### D.2.4 修改 IPv4 字段后校验和不正确
 
@@ -168,6 +174,8 @@ BMv2 允许将普通报文从入端口发回，[Hello P4 示例](../examples/01-
 | `.p4` 源码            | 重新编译，再安装新的流水线配置。使用 P4Runtime 时同步更新配套的 P4Info |
 | `commands.txt` 等文件 | 将命令实际提交给正确实例的 CLI，并检查每条命令的结果                   |
 
+仓库编号示例的 `run.sh` 每次都会重新编译源码并启动新实例。02~05 的 `runtime/s1-commands.txt` 按新实例编写，加载前还需过滤注释和空行，不能向已有配置的实例重复加载。需要修改正在运行的表项时，应选择对应的修改或删除命令，并读回确认。
+
 `simple_switch` 的 JSON 切换涉及 `--enable-swap`、`load_new_config_file` 和 `swap_configs`。P4Runtime 则有独立的流水线配置 RPC。它们都不能一概视为保持原状态的无损更新。尤其是 `VERIFY_AND_COMMIT` 会清除原转发状态，不能为了修改一条表项就反复安装整个程序。
 
 ## D.3 P4Runtime
@@ -193,7 +201,7 @@ BMv2 允许将普通报文从入端口发回，[Hello P4 示例](../examples/01-
 
 还要检查优先级和默认表项规则。含 `ternary`、`range` 或 `optional` 键的普通表项需要正整数优先级，P4Runtime 中数值较大者优先。默认表项使用空匹配列表、优先级 0，并通过 `MODIFY` 更新。
 
-批量 `Write` 失败时应读取 trailing metadata 中的 `grpc-status-details-bin`。本机逐项的 `INVALID_ARGUMENT` 等错误可能包在外层 `UNKNOWN` 中。仅打印外层状态会漏掉具体原因。处理代码见[第 15 章](../docs/15-P4Runtime控制平面.md)。
+批量 `Write` 失败时应读取 trailing metadata 中的 `grpc-status-details-bin`。本机逐项的 `INVALID_ARGUMENT` 等错误可能包在外层 `UNKNOWN` 中。仅打印外层状态会漏掉具体原因，错误结构与定位方法见 [15.9 节](../docs/15-P4Runtime控制平面.md#159-错误处理与常见陷阱)。
 
 ### D.3.3 收不到 `PacketIn`
 
@@ -345,7 +353,7 @@ p4c-bm2-ss --std p4-16 -E examples/01-hello/hello.p4 \
 
 对 V1Model 的 `hash`，当 `max > 0` 且输出位宽足够时，结果位于 `[base, base + max - 1]`。`max = 0` 时返回 `base`。
 
-若 `base = 0`、`max = 10`，结果为 0～9。将它直接用作 1024 个槽的索引，只会用到前 10 个槽。这并不说明这 10 个槽之间必然分布不均。希望覆盖 1024 个槽时，应调整范围，并让查表、数组容量和控制平面配置保持一致。范围正确仍不保证哈希均匀或没有碰撞，见[第 12 章](../docs/12-外部对象Extern.md)。
+若 `base = 0`、`max = 10`，结果为 0~9。将它直接用作 1024 个槽的索引，只会用到前 10 个槽。这并不说明这 10 个槽之间必然分布不均。希望覆盖 1024 个槽时，应调整范围，并让查表、数组容量和控制平面配置保持一致。范围正确仍不保证哈希均匀或没有碰撞，见[第 12 章](../docs/12-外部对象Extern.md)。
 
 ### D.5.4 匹配字段顺序取决于控制接口
 

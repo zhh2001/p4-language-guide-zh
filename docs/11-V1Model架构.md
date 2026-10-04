@@ -1,6 +1,6 @@
 # 11 · V1Model 架构详解
 
-本章依据 [p4c 的 `v1model.p4`](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/p4include/v1model.p4)和 [BMv2 `simple_switch` 文档](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md)，说明处理块接口、标准元数据及特殊报文路径。本机验证使用 p4c 1.2.5.10（`8b6de3c57`）和 `simple_switch` 1.15.0-2bdd0b7b。
+本章依据 [p4c 的 `v1model.p4`](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/p4include/v1model.p4) 和 [BMv2 `simple_switch` 文档](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md)，说明处理块接口、标准元数据及特殊报文路径。本机验证使用 p4c 1.2.5.10 和 `simple_switch` 1.15.0。
 
 接口声明用于阅读架构，已经包含 `v1model.p4` 时不应重复定义。涉及 `hdr`、`meta`、`sm` 的片段采用 11.7 节的命名；额外类型会在相应位置说明。
 
@@ -443,6 +443,8 @@ p4c-bm2-ss --std p4-16 --arch v1model -o v1model-demo.json v1model-demo.p4
 ```
 
 绑定输入端口与端口 2 后即可测试，无需下发这条 `const entries` 路由。P4 源码中的前缀使用 `&&&` 掩码表达；这里不能把 `10.0.2.0/24` 的文本写法照搬成整数除法表达式。
+
+需要运行双向路由实验时，可使用仓库的 [IPv4 路由示例](../examples/03-ipv4-router/README.md)。该例通过 Thrift 分别配置路由、下一跳 MAC 和出端口 MAC，动作及参数与本节的固定路由不同。其运行脚本会编译示例目录中的 `router.p4`，不会加载这里另存的 `v1model-demo.p4`。
 
 | 输入条件                                            | 预期结果                                     |
 | --------------------------------------------------- | -------------------------------------------- |

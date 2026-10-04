@@ -1,6 +1,6 @@
 # 12 · 外部对象 Extern
 
-本章依据 [P4₁₆ 1.2.5 规范](https://p4.org/wp-content/uploads/sites/53/2024/10/P4-16-spec-v1.2.5.html)、[本机 `v1model.p4`](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/p4include/v1model.p4)及 [BMv2 实现说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md)，讨论 extern 的接口、状态与调用约束。验证环境与第 11 章相同：p4c 1.2.5.10（`8b6de3c57`）、`simple_switch` 1.15.0-2bdd0b7b。
+本章依据 P4₁₆ 1.2.5 规范、[本机 `v1model.p4`](https://github.com/p4lang/p4c/blob/8b6de3c579e717ee278c38041b868e9ef2345f5f/p4include/v1model.p4) 及 [BMv2 实现说明](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md)，讨论 extern 的接口、状态与调用约束。验证环境与第 11 章相同：p4c 1.2.5.10、`simple_switch` 1.15.0。
 
 下文采用头文件默认的 `V1MODEL_VERSION=20180101`。报头名沿用 [11.7 节](./11-V1Model架构.md#117-完整示例固定-ipv4-路由实验)的 `hdr.ethernet`、`hdr.ipv4`，标准元数据名为 `sm`。除接口声明和明确标为全局的类型外，代码片段放在 Ingress 中；实例、动作和表位于声明区，调用语句位于 `apply` 或动作体中。
 
@@ -258,13 +258,15 @@ if (hdr.ipv4.isValid()) {
 
 设算法得到的值为 H：`max >= 1` 时结果为 `base + H % max`；`max == 0` 时为 `base`。输出位宽须能容纳结果。本机支持运行时的 `base`、`max`，桶数也不要求是 2 的幂。哈希用于分桶时允许碰撞，不能当作唯一流标识或密码学认证。
 
+完整选路实验见仓库的 [ECMP 示例](../examples/05-ecmp/README.md)。它对 TCP／UDP 五元组计算哈希，并用两张普通表配置 ECMP 组与下一跳，没有使用 `action_selector`。该例明确拒绝所有 IPv4 分片，输入范围和验证方法以示例说明为准。
+
 ## 12.8 校验和接口
 
 `verify_checksum` 只用于 `VerifyChecksum`，其校验和值参数为 `in`；`update_checksum` 只用于 `ComputeChecksum`，对应参数为 `inout`。验证失败通过 `checksum_error` 报告，由程序决定是否丢弃。
 
 计算元组必须覆盖协议要求的字段，算法和结果位宽需要目标支持。带 `_with_payload` 后缀的接口还纳入 Parser 未解析的字节，并不会自动按 IPv4、TCP 或 UDP 的长度字段裁剪覆盖范围。完整声明和 IPv4 示例见 [11.5.2 节](./11-V1Model架构.md#1152-校验和验证与更新)。
 
-V1Model 的旧 `Checksum16` 对象已弃用，不能与其他架构的同名对象混为一谈。
+V1Model 的旧 `Checksum16` 对象已弃用，只提供接收数据参数的 `get(data)`。VSS 的同名对象使用 `clear`、`update`、`remove` 和 `get()`，不能互换。两种接口的来源见 [6.12 节](./06-Parser解析器.md#612-parser-里的局部变量与实例)。
 
 ## 12.9 `digest`：向控制平面报告数据
 
@@ -368,6 +370,17 @@ BMv2 的 [custom_extern 示例](https://github.com/p4lang/behavioral-model/tree/
 ## 12.15 综合示例：带命中统计的 IPv4 ACL
 
 下面的 Control 可直接替换 [11.7 节完整程序](./11-V1Model架构.md#117-完整示例固定-ipv4-路由实验)中的 `MyIngress`，其余类型和处理块保留。先检查输入，再执行 ACL；允许的报文继续查固定路由，拒绝和未命中的报文丢弃。ACL 只匹配 IPv4 地址和协议号，不读取传输层端口。
+
+本节与仓库 [ACL 示例](../examples/04-acl/README.md)都演示命中计数，但策略和转发方式不同：
+
+| 项目         | 本节 `extern-acl.p4`                                 | 编号示例 04                      |
+| ------------ | ---------------------------------------------------- | -------------------------------- |
+| ACL 键       | 源、目的 IPv4 地址为三元匹配，协议号为精确匹配       | 五元组，五个字段均为三元匹配     |
+| ACL 未命中   | 默认拒绝，记录 `acl_miss[0]`                         | 默认允许，同样记录 `acl_miss[0]` |
+| 允许后的处理 | 查固定 IPv4 路由，改写 MAC、递减 TTL 并更新校验和    | 查静态二层表，保持报文字节不变   |
+| IPv4 分片    | 只按 IPv4 报头中的地址和协议号过滤，不检查传输层端口 | 在查询 ACL 前拒绝首片和后续片    |
+
+两例的动作名、匹配字段和拓扑配置应分别使用，不能直接混用 CLI 命令。下面的代码和命令均针对本节程序。
 
 ```p4
 control MyIngress(inout headers hdr, inout metadata meta,
