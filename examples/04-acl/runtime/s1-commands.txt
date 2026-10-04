@@ -1,13 +1,17 @@
-# L2 转发表
+# 只向尚未配置的新实例加载一次。run.sh 会过滤整行注释和空行。
+# L2 转发，与三台主机的 MAC 和端口对应。
 table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:01 => 1
 table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:02 => 2
 table_add MyIngress.l2 MyIngress.forward 00:00:00:00:00:03 => 3
 
-# ACL 规则（priority 越大越先）
-# 1. 拒绝 h1 -> h3 任何流量
-table_add MyIngress.acl MyIngress.deny 10.0.0.1&&&0xffffffff 10.0.0.3&&&0xffffffff 0&&&0 0&&&0 0&&&0 => 200
+# BMv2 Thrift CLI 数值越小越优先。末尾的数字是优先级，不是动作参数。
+# 优先级 5：允许 h3 使用源端口 40000 访问 h2 的 TCP 22，覆盖下面的拒绝规则。
+table_add MyIngress.acl MyIngress.permit 10.0.0.3&&&0xffffffff 10.0.0.2&&&0xffffffff 6&&&0xff 40000&&&0xffff 22&&&0xffff => 5
+# 优先级 10：拒绝 h1 到 h3 的 IPv4 报文，不区分协议和端口。
+table_add MyIngress.acl MyIngress.deny 10.0.0.1&&&0xffffffff 10.0.0.3&&&0xffffffff 0&&&0 0&&&0 0&&&0 => 10
+# 优先级 20：拒绝其他发往 10.0.0.0/24 的 TCP 22 流量。
+table_add MyIngress.acl MyIngress.deny 0&&&0 10.0.0.0&&&0xffffff00 6&&&0xff 0&&&0 22&&&0xffff => 20
 
-# 2. 拒绝进入 10.0.0.0/24 的 SSH
-table_add MyIngress.acl MyIngress.deny 0&&&0 10.0.0.0&&&0xffffff00 6&&&0xff 0&&&0 22&&&0xffff => 100
-
-# （缺省规则已在 P4 源码中写为 permit）
+# ACL 未命中时执行源码中的默认 permit，并更新 acl_miss[0]。
+table_dump MyIngress.l2
+table_dump MyIngress.acl
