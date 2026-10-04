@@ -11,7 +11,7 @@ P4<sub>16</sub> 没有专用的 `deparser` 关键字。反解析由带 `packet_o
 对于本章的 BMv2 `simple_switch` 普通报文路径，输出由两部分组成：
 
 ```mermaid
-flowchart LR
+flowchart TB
     H[处理后的报头] --> E[按 emit 顺序序列化]
     E --> O[输出报文]
     P[Parser 未消耗的字节] -->|接在已输出报头之后| O

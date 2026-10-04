@@ -9,7 +9,7 @@
 Parser 用状态机描述怎样从输入报文中提取数据。它从 `start` 状态开始，按状态内的语句顺序执行，再转移到其他状态，直到到达 `accept` 或 `reject`。
 
 ```mermaid
-flowchart LR
+flowchart TB
     A[start] --> B[提取 Ethernet]
     B -->|EtherType 为 IPv4| C[提取 IPv4]
     B -->|其他 EtherType| D[accept]

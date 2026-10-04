@@ -9,7 +9,7 @@
 V1Model 是 BMv2 `simple_switch` 使用的架构。普通单播报文的处理顺序可概括为：
 
 ```mermaid
-flowchart LR
+flowchart TB
     P[Parser] --> V[VerifyChecksum]
     V --> I[Ingress]
     I --> Q[复制与排队]
