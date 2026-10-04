@@ -38,7 +38,7 @@ sudo bash examples/check-env.sh
 
 ## 如果 `run.sh` 报错
 
-- 缺 `hping3`：`sudo apt install hping3`，或用内置的 scapy 回退
+- 编号示例的数据平面验证使用 Python 标准库，不需要 hping3 或 Scapy。Python 版本及 P4Runtime 的额外依赖见各示例 README
 - 没有 `simple_switch`：先按 [第 1 章](../docs/01-环境搭建.md#15-常见问题的定位顺序)检查安装路径与环境变量
 - 权限不够：所有 `run.sh` 都要 `sudo`
 
