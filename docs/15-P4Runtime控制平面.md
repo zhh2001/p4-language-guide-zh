@@ -2,6 +2,8 @@
 
 本章说明 P4Info、流水线配置、表项更新与 StreamChannel，并用 Python 完成两组实验：配置 L2 单播表，以及通过 PacketIn／PacketOut 中转报文、读取计数器。
 
+协议语义以 [P4Runtime 规范 v1.4.1](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)为准，目标实现的差异在相应小节说明。需要先运行仓库已有的控制客户端，可直接查看 [15.5.3 节的 ECMP 实验](#1553-运行仓库中的-ecmp-控制客户端)。
+
 ## 15.1 P4Runtime 管理什么
 
 P4Runtime 是控制数据平面对象的标准接口。P4Info 描述程序向控制平面暴露的表、动作及相关资源，客户端据此构造 protobuf 消息，通过 gRPC 与设备通信。
@@ -93,7 +95,7 @@ Digest 携带的是 P4 程序选择的数据，不是完整报文的 PacketIn。
 
 ## 15.4 Python 客户端环境
 
-本章直接使用 gRPC 生成的 Python 绑定：`p4.v1`、`p4.config.v1`，以及 `grpcio` 和 protobuf 运行库。协议定义与 Python 代码可查阅 [P4Runtime 官方仓库](https://github.com/p4lang/p4runtime)。交互式操作也可使用 [14.5.3 节的 P4Runtime Shell](./14-BMv2编译与运行.md#1453-p4runtime-shell)。
+本章直接使用 gRPC 生成的 Python 绑定：`p4.v1`、`p4.config.v1`，以及 `grpcio` 和 protobuf 运行库。交互式操作也可使用 [14.5.3 节的 P4Runtime Shell](./14-BMv2编译与运行.md#1453-p4runtime-shell)，它另需安装 `p4runtime-shell` 包，不能仅凭上述模块导入成功判断 Shell 也已可用。
 
 在已经安装这些依赖的 Python 环境中检查导入：
 
@@ -101,7 +103,7 @@ Digest 携带的是 P4 程序选择的数据，不是完整报文的 PacketIn。
 python3 -c 'import grpc; from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc; from p4.config.v1 import p4info_pb2'
 ```
 
-本机旧版生成模块与 protobuf 运行库有兼容问题，需在本章 Python 命令前加 `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`。依赖与解释器的检查方法见 [1.3.3 节](./01-环境搭建.md#133-python-解释器与依赖)。这个兼容设置须在导入模块前生效。控制客户端连接本地 gRPC 服务通常不需要 sudo。
+本机旧版生成模块与 protobuf 运行库有兼容问题，需在本章 Python 命令前加 `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python`。依赖与解释器的检查方法见 [1.3.3 节](./01-环境搭建.md#133-python-解释器与依赖)。这个兼容设置须在导入模块前生效。控制客户端连接本地 gRPC 服务通常不需要 sudo，创建网络、启动交换机和抓取原始报文则需要相应权限。
 
 ## 15.5 动手：配置 L2 单播表
 
@@ -287,6 +289,30 @@ python3 build/ch15/control.py
 
 该程序用于新启动、由单个客户端控制的实验实例。它没有实现高可用控制器的重连、业务状态同步和冲突消解。长期运行的客户端还须持续处理仲裁状态变化，失去主控后停止写入；服务端也会检查请求中的选举 ID。
 
+### 15.5.3 运行仓库中的 ECMP 控制客户端
+
+仓库的 [ECMP 示例](../examples/05-ecmp/README.md#p4runtime-配置方式)提供了完整运行入口。从仓库根目录执行：
+
+```bash
+sudo bash examples/05-ecmp/run.sh --p4runtime
+```
+
+这要求 `sudo` 环境中的 `python3` 能导入 15.4 节的模块。若依赖装在虚拟环境中，可用 `P4_ECMP_PYTHON` 指定控制客户端的解释器。下面按第 1 章的安装目录举例，并加入本机旧版生成模块所需的兼容设置，实际路径应以自己的安装位置为准：
+
+```bash
+sudo env P4_ECMP_PYTHON="$HOME/p4-work/p4dev-python-venv/bin/python" \
+    PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
+    bash examples/05-ecmp/run.sh --p4runtime
+```
+
+`P4_ECMP_PYTHON` 只控制 [runtime/ctrl.py](../examples/05-ecmp/runtime/ctrl.py) 使用哪个解释器，报文验证仍由 `sudo` 环境中的 `python3` 执行，需要 Linux Python 3.12+。该模式使用 `simple_switch_grpc`，不依赖 `simple_switch_CLI` 或 P4Runtime Shell。其余命令依赖见[示例总览](../examples/README.md#运行前)。
+
+运行脚本重新编译 ECMP，创建一个发送端与两个下一跳接收端，启动自己的交换机实例，再把设备 ID、地址和本次编译产物传给客户端。客户端确认主控身份，安装流水线，先写两个组内成员，再写引用它们的路由。读回三条表项并按字段 ID 和数值核对后退出，运行脚本接着执行与 Thrift 模式相同的逐帧验证。
+
+这与前面的 L2 实验使用不同的程序、拓扑和配置，不能将 ECMP 客户端直接连到 L2 实例。ECMP 默认使用 Thrift 9090 和 gRPC 50051，运行前应结束占用这些端口的前一实验，或按示例 README 更换端口。不要沿用正文 L2 实例的设备 ID 15，自动脚本会传入本次实例的 ID。
+
+ECMP 验证报文到达哪个下一跳接收端，不以测试目的地址的端到端 ping 为通过标准。默认完成后清理本次资源，加 `--keep` 可继续观察。单独调用 `ctrl.py` 只检查控制平面流程，不创建网络，也不执行报文验证。
+
 ## 15.6 PacketIn／PacketOut 与计数器实验
 
 ### 15.6.1 CPU 端口和报文路径
@@ -457,6 +483,8 @@ python3 build/ch15/packetio.py
 ```
 
 该脚本安装 `cpu` 流水线，会替换 L2 程序并重置转发状态。看到 `READY` 后再发测试流量，观察 PacketIn 的入端口、负载长度、计数器值及另一主机的收包结果。Ctrl+C 关闭客户端，这时数据平面仍把主机报文送往 CPU，因此不会继续完成中转。
+
+本节使用的是手工创建的拓扑。实验结束后，还需停止交换机与抓包进程，再按 [14.4.1 节](./14-BMv2编译与运行.md#1441-手工创建-namespace-与-veth)删除本次命名空间和接口。
 
 这里 `CounterEntry.index.index = port` 明确指定一个索引，省略 `index` 消息通常表示读取整个数组，与读取索引 0 不同。计数器在读请求期间仍可能更新，多次读取不是一致快照。对已有计数器单元清零使用 `MODIFY` 写入相应计数值，不是为它新建一条表项。
 
