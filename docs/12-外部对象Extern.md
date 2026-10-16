@@ -147,12 +147,12 @@ BMv2 的这组接口使用两个速率、三种颜色。控制平面配置承诺
 meter_set_rates MyIngress.per_flow_meter 0 0.001:10 0.002:20
 ```
 
-对于本节的 packets meter，CIR 为每秒 1000 个报文、CBS 为 10 个报文，PIR 为每秒 2000 个报文、PBS 为 20 个报文。这里的 CLI 速率单位是**报文／微秒**。
+对于本节的 packets meter，CIR 为每秒 1000 个报文、CBS 为 10 个报文，PIR 为每秒 2000 个报文、PBS 为 20 个报文。这里的 CLI 速率单位是**报文/微秒**。
 
 | 配置接口                | packets meter 的速率单位 | bytes meter 的速率单位 |
 | ----------------------- | ------------------------ | ---------------------- |
-| `simple_switch_CLI`     | 报文／微秒               | 字节／微秒             |
-| P4Runtime `MeterConfig` | 报文／秒                 | 字节／秒               |
+| `simple_switch_CLI`     | 报文/微秒               | 字节/微秒             |
+| P4Runtime `MeterConfig` | 报文/秒                 | 字节/秒               |
 
 突发容量分别以报文数或字节数表示，跨接口配置时须先换算速率单位。单位依据 [BMv2 CLI 文档](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/runtime_CLI.md#meter_set_rates) 和 [P4Runtime 规范](https://p4lang.github.io/p4runtime/spec/v1.4.1/P4Runtime-Spec.html)。
 
@@ -201,7 +201,7 @@ if (metered_sources.apply().hit) {
 register<bit<32>>(1024) pkt_count;
 ```
 
-这声明 1024 个 32 位元素，索引为 0 到 1023。V1Model 接口文档规定的元素类型是 `bit<W>`。本机 p4c／BMv2 还支持 `int<W>`，但不支持直接把结构体作为元素类型。需要保存多个字段时，可以在一个位串中拼接编码，再用切片取回。
+这声明 1024 个 32 位元素，索引为 0 到 1023。V1Model 接口文档规定的元素类型是 `bit<W>`。本机 p4c/BMv2 还支持 `int<W>`，但不支持直接把结构体作为元素类型。需要保存多个字段时，可以在一个位串中拼接编码，再用切片取回。
 
 读取方法的实参顺序是“输出值、索引”，写入则是“索引、输入值”。下面动作要求调用者已经检查 `meta.flow_id < 1024`：
 
@@ -254,11 +254,11 @@ if (hdr.ipv4.isValid()) {
 }
 ```
 
-此例以地址和协议号作为哈希输入。加入 TCP／UDP 端口前，必须先确认相应报头已成功解析且有效。非首片 IPv4 分片应按分片策略处理，不能从其负载起点直接读取 TCP／UDP 端口。
+此例以地址和协议号作为哈希输入。加入 TCP/UDP 端口前，必须先确认相应报头已成功解析且有效。非首片 IPv4 分片应按分片策略处理，不能从其负载起点直接读取 TCP/UDP 端口。
 
 设算法得到的值为 H，`max >= 1` 时结果为 `base + H % max`，`max == 0` 时为 `base`。输出位宽须能容纳结果。本机支持运行时的 `base`、`max`，桶数可取非 2 的幂。多个输入可能落入同一桶，以它组织按流状态时还需处理碰撞。
 
-完整选路实验见仓库的 [ECMP 示例](../examples/05-ecmp/README.md)。它对 TCP／UDP 五元组计算哈希，用两张普通表配置 ECMP 组与下一跳。该例在解析传输层报头前拒绝所有 IPv4 分片，输入范围和验证方法见示例说明。
+完整选路实验见仓库的 [ECMP 示例](../examples/05-ecmp/README.md)。它对 TCP/UDP 五元组计算哈希，用两张普通表配置 ECMP 组与下一跳。该例在解析传输层报头前拒绝所有 IPv4 分片，输入范围和验证方法见示例说明。
 
 ## 12.8 校验和接口
 

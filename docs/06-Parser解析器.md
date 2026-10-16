@@ -28,7 +28,7 @@ flowchart TB
 
 ```text
 parser 名称(调用参数)(可选的构造参数) {
-    局部常量、变量、extern／子解析器实例、value_set
+    局部常量、变量、extern/子解析器实例、value_set
     state start { ... }
     state parse_ipv4 { ... }
     ...
@@ -109,7 +109,7 @@ transition select(hdr.ethernet.etherType) {
 
 按语言规范，如果没有标签匹配，也没有 `default` 或 `_` 兜底，Parser 应以 `error.NoMatch` 失败。通配标签之后的分支不可达，所以通常将它放在最后。
 
-本机 p4c／BMv2 组合在未匹配且没有兜底分支时会结束解析，但 `parser_error` 仍为 `NoError`，相关实现见 [BMv2 的状态选择代码](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/src/bm_sim/parser.cpp#L1050-L1085)。需要报错时，应让 `default` 转到执行 `verify(false, error.NoMatch)` 的状态。
+本机 p4c/BMv2 组合在未匹配且没有兜底分支时会结束解析，但 `parser_error` 仍为 `NoError`，相关实现见 [BMv2 的状态选择代码](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/src/bm_sim/parser.cpp#L1050-L1085)。需要报错时，应让 `default` 转到执行 `verify(false, error.NoMatch)` 的状态。
 
 `select` 可以根据固定位宽整数、`bool`、枚举及相应元组选择状态，也可结合 `lookahead`。本章使用编译期常量标签。需要控制平面更新匹配集合时，可使用目标支持的 Parser `value_set`，见 [第 13 章](./13-注解与高级特性.md)。
 
@@ -125,7 +125,7 @@ transition select(hdr.ipv4.ihl, hdr.ipv4.protocol) {
 }
 ```
 
-每一项分别与对应字段匹配，位宽也分别检查。实际解析 TCP／UDP 前还应处理 IPv4 选项和分片。非首片不能仅凭 `protocol` 字段就把当前负载当作传输层报头。
+每一项分别与对应字段匹配，位宽也分别检查。实际解析 TCP/UDP 前还应处理 IPv4 选项和分片。非首片不能仅凭 `protocol` 字段就把当前负载当作传输层报头。
 
 ## 6.5 标签集合的语法
 
@@ -252,7 +252,7 @@ if (sm.parser_error != error.NoError) {
 | ----------------------- | --------------------------------------------------------------- |
 | `PacketTooShort`        | `extract`、`lookahead` 或 `advance` 所需数据超出输入报文        |
 | `NoMatch`               | 规范规定的 `select` 未匹配错误，本机目标需显式兜底，见 6.4.1 节 |
-| `StackOutOfBounds`      | Parser 访问越界的报头栈 `next`／`last`                          |
+| `StackOutOfBounds`      | Parser 访问越界的报头栈 `next`/`last`                          |
 | `HeaderTooShort`        | 可变长提取超过报头声明容量                                      |
 | `ParserInvalidArgument` | 解析操作参数不满足目标要求                                      |
 | 用户声明的错误          | `verify` 条件失败                                               |
@@ -522,7 +522,7 @@ p4test --std p4-16 parser-demo.p4
 p4c-bm2-ss --std p4-16 --arch v1model -o parser-demo.json parser-demo.p4
 ```
 
-本例校验 IPv4 版本、IHL 下界及 `totalLen` 不小于报头长度，所需报头数据是否足够由 `extract` 检查。校验和控制块留空，IPv4 校验和保持原值。TCP／UDP 和 IP 负载保持未解析，`totalLen` 不用于检查或裁剪这部分数据，以太网填充也随尾部负载保留。
+本例校验 IPv4 版本、IHL 下界及 `totalLen` 不小于报头长度，所需报头数据是否足够由 `extract` 检查。校验和控制块留空，IPv4 校验和保持原值。TCP/UDP 和 IP 负载保持未解析，`totalLen` 不用于检查或裁剪这部分数据，以太网填充也随尾部负载保留。
 
 Deparser 按 Ethernet、VLAN、IPv4 和选项的顺序输出有效报头，BMv2 再附上尚未解析的负载。因此，提取出的选项需要对应的 `emit` 才能保留在输出中。
 

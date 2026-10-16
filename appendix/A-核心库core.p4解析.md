@@ -47,7 +47,7 @@ error {
 
 `HeaderTooShort` 与 `PacketTooShort` 分别涉及目的报头容量和输入数据量，不能互换。多个条件同时违规时，不应依赖所有目标按同一顺序报告错误。
 
-本教程的 p4c／BMv2 组合在 `select` 无匹配分支时存在实现差异，不能可靠地产生规范要求的 `NoMatch`。显式兜底的处理方法见 [6.4.1 节](../docs/06-Parser解析器.md#641-select-表达式)。普通报头栈下标的越界规则也不能一概归入 `StackOutOfBounds`：例如编译期已知的非法下标应在编译时被拒绝。
+本教程的 p4c/BMv2 组合在 `select` 无匹配分支时存在实现差异，不能可靠地产生规范要求的 `NoMatch`。显式兜底的处理方法见 [6.4.1 节](../docs/06-Parser解析器.md#641-select-表达式)。普通报头栈下标的越界规则也不能一概归入 `StackOutOfBounds`：例如编译期已知的非法下标应在编译时被拒绝。
 
 解析错误是否导致丢包由架构及后续处理决定。在 V1Model 中，Ingress 可以检查 `standard_metadata_t` 的 `parser_error` 字段，再明确执行丢弃逻辑。
 

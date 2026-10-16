@@ -8,8 +8,8 @@
 
 | 文件                                                         | 内容                                                                                |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| [very_simple_switch_model.p4](./very_simple_switch_model.p4) | 端口类型、输入输出元数据、Parser／Control 接口、`VSS` 包和 `Checksum16` extern 声明 |
-| [vss.p4](./vss.p4)                                           | Ethernet／IPv4 报头、解析器、四张匹配动作表、Deparser 与 `main` 实例                |
+| [very_simple_switch_model.p4](./very_simple_switch_model.p4) | 端口类型、输入输出元数据、Parser/Control 接口、`VSS` 包和 `Checksum16` extern 声明 |
+| [vss.p4](./vss.p4)                                           | Ethernet/IPv4 报头、解析器、四张匹配动作表、Deparser 与 `main` 实例                |
 
 两个文件描述了接口和可编程逻辑。端口收发、输入仲裁、Parser 错误传递、输出分发、负载拼接与校验和 extern 的实际实现，需要由支持 VSS 的目标提供。仅声明 `package VSS` 或 `extern Checksum16` 不会自动产生这些实现。
 
@@ -30,8 +30,8 @@ TopParser → TopPipe → TopDeparser
 | 数值        | 用途               |
 | ----------- | ------------------ |
 | 0～7        | 物理 Ethernet 端口 |
-| 13（`0xD`） | 重循环输入／输出   |
-| 14（`0xE`） | CPU 输入／输出     |
+| 13（`0xD`） | 重循环输入/输出   |
+| 14（`0xE`） | CPU 输入/输出     |
 | 15（`0xF`） | 丢弃输出           |
 
 4 位能表示 16 个数值，不表示设备有 16 个物理端口。8～12 属于无效输出端口，规范要求将对应报文丢弃。这些编号属于 VSS 的约定，不能直接用作 V1Model 的端口配置。
@@ -101,4 +101,4 @@ p4test --std p4-16 examples/vss/vss.p4
 - 对照[示例 03](../03-ipv4-router/README.md)，分析如何在 V1Model 中传递解析错误、选择输出端口和更新校验和。
 - 设计 TTL 处理的扩展时，分别讨论正常转发、TTL 0、TTL 1 和 CPU 收包内容，不要只观察 TTL 减法本身。
 
-实测工具：p4c／p4test `1.2.5.10`。本轮验证范围为静态检查与目标接口诊断，未进行 VSS 数据平面运行测试。
+实测工具：p4c/p4test `1.2.5.10`。本轮验证范围为静态检查与目标接口诊断，未进行 VSS 数据平面运行测试。

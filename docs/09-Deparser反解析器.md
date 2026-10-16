@@ -240,7 +240,7 @@ p4c-bm2-ss --std p4-16 --arch v1model -o deparser-demo.json deparser-demo.p4
 
 ## 9.7 Deparser 中能写哪些逻辑
 
-从语言上看，Deparser 是控制块，实际允许的语句由架构和目标进一步约束。对于本机 V1Model／BMv2，应使用直接、顺序的 `packet.emit(...)` 调用，参见 [BMv2 的 Deparser 限制](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md#restrictions-on-code-in-the-deparser-control)。
+从语言上看，Deparser 是控制块，实际允许的语句由架构和目标进一步约束。对于本机 V1Model/BMv2，应使用直接、顺序的 `packet.emit(...)` 调用，参见 [BMv2 的 Deparser 限制](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md#restrictions-on-code-in-the-deparser-control)。
 
 本机 BMv2 后端拒绝 Deparser 中的运行时 `if`、表应用和包装了 `emit` 的动作调用。按有效位选择输出时，直接调用 `emit(hdr.vlan)` 即可，它会跳过无效报头。
 
@@ -270,7 +270,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 
 待计算字段按 IPv4 报头顺序排列，原 `hdrChecksum` 不加入数据元组。本片段在 IHL 大于 5 时跳过更新。带选项的 IPv4 报头需要将选项及报头内填充一并纳入校验范围。
 
-修改 TTL、IP 地址或传输层字段后，应按协议和架构更新相应校验和。TCP／UDP 还需要按各自的校验范围构造数据，IPv4 报头元组仅用于 IP 报头校验和。
+修改 TTL、IP 地址或传输层字段后，应按协议和架构更新相应校验和。TCP/UDP 还需要按各自的校验范围构造数据，IPv4 报头元组仅用于 IP 报头校验和。
 
 ## 9.8 位宽、字节对齐与 `varbit`
 
