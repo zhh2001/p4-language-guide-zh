@@ -228,7 +228,7 @@ action increment_count() {
 
 本机 `simple_switch` 有独立的 Ingress、多个 Egress 及发送线程，在一个动作执行期间锁住所访问的寄存器数组。将读、改、写放在同一动作内，可使该序列与访问相同数组的其他报文动作互斥。
 
-本机的寄存器锁以动作为边界。跨多个动作或多次表调用的 `@atomic` 块仍按各动作分别加锁，编译器没有生成覆盖整个块的事务。实现说明见 [BMv2 register notes](https://github.com/p4lang/behavioral-model/blob/2bdd0b7b2b2ae89faf2720f2158e9842bc6d2dd2/docs/simple_switch.md#bmv2-register-implementation-notes)。
+本机的寄存器锁以动作为边界。跨多个动作或多次表调用的 `@atomic` 块仍按各动作分别加锁，编译器没有生成覆盖整个块的事务。
 
 ### 12.6.3 适用范围
 
