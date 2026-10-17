@@ -21,9 +21,9 @@
 sudo bash examples/check-env.sh
 ```
 
-[check-env.sh](./check-env.sh)编译 Hello P4，再验证一帧报文能否由 BMv2 原样返回。脚本结束时清理本次创建的资源。它不检查 Mininet 或 P4Runtime，也不替代各示例自己的验证。
+[check-env.sh](./check-env.sh)编译 Hello P4，再验证一帧报文能否由 BMv2 原样返回。脚本结束时清理本次创建的资源。这个自检覆盖编译和单帧反射，各示例的完整验证由对应的 `run.sh` 执行。
 
-编号示例的网络由 `run.sh` 直接使用 network namespace 和 veth 创建，运行时需要 root 权限。安装了 Mininet 并不表示编译器、BMv2 或控制客户端已经可用，准备环境时应分别检查。
+编号示例由 `run.sh` 直接创建 network namespace 和 veth 链路，运行时需要 root 权限。Mininet 的独立用法见[第 14 章](../docs/14-BMv2编译与运行.md#1442-用-mininet-管理同一拓扑)，编号示例所需的工具如下：
 
 | 用途                  | 依赖                                                  |
 | --------------------- | ----------------------------------------------------- |
@@ -35,9 +35,9 @@ sudo bash examples/check-env.sh
 | 手工抓包              | `tcpdump`                                             |
 | VSS 静态检查          | `p4test`                                              |
 
-01、02、03、05 的验证程序使用 `os.setns`，需要 Linux Python 3.12+。04 的验证程序使用 BMv2 文件端口，需要 Python 3.10+。编号示例的数据平面验证只使用 Python 标准库，不依赖 hping3 或 Scapy。
+01、02、03、05 的验证程序使用 `os.setns`，需要 Linux Python 3.12+。04 的验证程序使用 BMv2 文件端口，需要 Python 3.10+。编号示例的逐帧验证均使用 Python 标准库。
 
-05 的 `run.sh --p4runtime` 改用 `simple_switch_grpc`，控制客户端另需 gRPC、protobuf 和 P4Runtime 生成的 Python 模块。该模式不依赖 `simple_switch_CLI`。解释器选择与兼容设置见 [ECMP 的 P4Runtime 配置说明](./05-ecmp/README.md#p4runtime-配置方式)。
+05 的 `run.sh --p4runtime` 改用 `simple_switch_grpc`，控制客户端另需 gRPC、protobuf 和 P4Runtime 生成的 Python 模块。系统 `python3` 负责报文验证，`P4_ECMP_PYTHON` 可为控制客户端单独指定解释器。配置方法见 [ECMP 的 P4Runtime 配置说明](./05-ecmp/README.md#p4runtime-配置方式)。
 
 ## 编译、验证与保留拓扑
 
@@ -47,7 +47,7 @@ sudo bash examples/check-env.sh
 bash examples/01-hello/build.sh
 ```
 
-`build.sh` 默认把 BMv2 JSON 与 `.p4info.txtpb` 写入示例目录，也可用第一个参数指定输出目录。P4Info 描述控制平面接口，不能作为 BMv2 转发程序加载。普通 Thrift 实验运行时不读取它，ECMP 的 P4Runtime 模式会使用它安装流水线。
+`build.sh` 默认把 BMv2 JSON 与 `.p4info.txtpb` 写入示例目录，也可用第一个参数指定输出目录。BMv2 加载 JSON 执行转发，P4Info 描述控制平面接口。本仓库的 Thrift 配置使用 JSON 中的对象信息，ECMP 的 P4Runtime 模式则使用 P4Info 和 JSON 安装流水线。
 
 运行完整实验：
 
@@ -55,7 +55,7 @@ bash examples/01-hello/build.sh
 sudo bash examples/01-hello/run.sh
 ```
 
-`run.sh` 会将当前源码重新编译到临时目录，不需要先运行 `build.sh`。它负责本次拓扑、交换机启动与配置，逐帧检查由 `verify.py` 执行。成功后退出并清理资源，编译、配置或验证失败时返回非零状态。其他编号示例使用同样的入口，具体测试内容见各目录 README。
+`run.sh` 自动将当前源码重新编译到临时目录，按各例的流程启动 BMv2、加载配置并调用 `verify.py` 检查报文。默认验证成功后退出并清理资源，编译、配置或验证失败时返回非零状态。其他编号示例使用同样的入口，具体测试内容见各目录 README。
 
 需要继续抓包或查看表项时，加上 `--keep`：
 
@@ -81,21 +81,21 @@ sudo bash examples/01-hello/run.sh --keep
     └── ctrl.py                # 仅 05 提供，P4Runtime 客户端
 ```
 
-`runtime/s1-commands.txt` 按新建的交换机实例编写。`run.sh` 会过滤注释和空行，再检查配置结果。不要直接将原文件重定向给 CLI，也不要向已配置的实例重复加载。
+`runtime/s1-commands.txt` 按新建的交换机实例编写。`run.sh` 会过滤注释和空行，再检查配置结果。手工加载时也先按对应 README 过滤命令，已有实例中的表项使用相应的修改或删除命令更新。
 
-VSS 目录包含架构声明和参考程序，用法见其 [README](./vss/README.md)，不采用上述运行流程。
+VSS 的架构声明、参考程序及 `p4test` 检查命令见其 [README](./vss/README.md)。
 
 ## 如何判断结果
 
-先看脚本是否成功退出，再对照该例 README 中的检查项目。几个容易混淆的地方是：
+各例的验证重点如下，运行后可对照脚本输出与对应 README 中的检查项目：
 
-- Hello P4 只做反射，不生成 ICMP Echo Reply，不能靠两台主机互相 ping 判断它是否正确。
+- Hello P4 分别从两个端口发包，检查发送主机收到的反射帧，并逐字节比较内容。
 - L2 示例检查单播、泛洪和 ping。IPv4 路由示例还会核对 MAC、TTL、校验和及丢弃行为。
 - ACL 示例在文件端口实例中精确核对报文和计数器，再用三主机拓扑检查允许、拒绝路径。
-- ECMP 示例把两个下一跳作为接收端，逐帧核对哈希选路和报头。测试目的地址不属于实际主机，因此不以端到端 ping 为验收条件。
-- VSS 的 `p4test` 检查不执行报文，也不会生成可供 `simple_switch` 加载的配置。
+- ECMP 示例把两个下一跳作为接收端，逐帧核对哈希选路、同流稳定性和输出报头。
+- VSS 查看 `p4test` 的退出状态与诊断，检查类型、参数方向和包实例装配。
 
-这些实验验证各自观察窗口内的功能行为，不测吞吐量，也不代表具备完整交换机或路由器的全部功能。
+逐帧检查以验证程序设置的观察窗口为准，具体用例和等待时间见各例 README。
 
 ## 遇到问题时
 
@@ -105,7 +105,7 @@ VSS 目录包含架构声明和参考程序，用法见其 [README](./vss/README
 | ------------------------ | ---------------------------------------------------------- |
 | 找不到编译器或交换机命令 | 安装路径，以及普通用户与 `sudo` 使用的 `PATH`              |
 | Python 模块无法导入      | 实际调用的解释器及其依赖，P4Runtime 模式还要检查客户端环境 |
-| 控制端口被占用           | 使用相应 README 中的环境变量选择空闲端口，保留其他实验进程 |
+| 控制端口被占用           | 使用相应 README 中的环境变量为本次实例另选空闲端口         |
 | CLI 配置报错             | 是否用了本例的新实例，是否重复加载，以及具体命令的错误输出 |
 | 报文验证失败             | 对照当前源码、表项与输出端口，查看脚本打印的交换机日志     |
 
