@@ -14,7 +14,7 @@
 sudo bash examples/check-env.sh
 ```
 
-自检脚本编译 Hello P4，再发送一帧报文，检查 BMv2 是否从入端口原样返回。结束时会清理本次创建的资源。这一步验证编译和报文反射，Mininet 与 P4Runtime 另有各自的检查步骤。
+自检脚本编译 Hello P4，再发送一帧报文，检查 BMv2 是否从入端口原样返回。结束时会清理本次创建的资源。随后可按需检查 [Mininet 基础网络](./docs/01-环境搭建.md#144-验证-mininet-基础网络)或准备 [P4Runtime 客户端环境](./docs/15-P4Runtime控制平面.md#154-python-客户端环境)。
 
 学习时可以把阅读和实验穿插起来：
 
@@ -55,11 +55,11 @@ sudo bash examples/check-env.sh
 
 ### 工具与控制平面
 
-| 章节                                                      | 内容                                     |
-| --------------------------------------------------------- | ---------------------------------------- |
-| [14 · BMv2 编译与运行](./docs/14-BMv2编译与运行.md)       | 编译产物、交换机启动、拓扑、配置与抓包   |
-| [15 · P4Runtime 控制平面](./docs/15-P4Runtime控制平面.md) | P4Info、主控仲裁、流水线配置与表项读写   |
-| [16 · PSA 与 TNA 简介](./docs/16-PSA与TNA简介.md)         | 架构接口、目标支持与迁移时需要核对的条件 |
+| 章节                                                      | 内容                                           |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| [14 · BMv2 编译与运行](./docs/14-BMv2编译与运行.md)       | 编译产物、交换机启动、拓扑、配置与抓包         |
+| [15 · P4Runtime 控制平面](./docs/15-P4Runtime控制平面.md) | P4Info、主控仲裁、流水线与表项配置、Packet I/O |
+| [16 · PSA 与 TNA 简介](./docs/16-PSA与TNA简介.md)         | PSA 转发实验、TNA/PNA 概览与架构迁移           |
 
 ### 附录
 
@@ -70,29 +70,29 @@ sudo bash examples/check-env.sh
 
 ## 配套实验
 
-编号示例使用 V1Model，由 `run.sh` 编译源码、创建实验网络、加载配置并运行验证。网络由 Linux network namespace 和 veth 组成。Mininet 的独立用法见第 14 章，编号脚本不调用它。
+五个编号示例使用 V1Model 与 BMv2，由各自的 `run.sh` 完成编译、网络创建和验证。脚本直接使用 Linux network namespace 与 veth，按各例需要配置表项或多播组，默认验证结束后清理资源。用 Mininet 管理拓扑的方法见 [14.4.2 节](./docs/14-BMv2编译与运行.md#1442-用-mininet-管理同一拓扑)。
 
-| 示例                                                      | 实验内容                                           |
-| --------------------------------------------------------- | -------------------------------------------------- |
-| [01 · Hello P4](./examples/01-hello/README.md)            | 从入端口原样返回报文，检查内容与输出端口           |
-| [02 · L2 静态转发](./examples/02-l2-switch/README.md)     | 静态单播、未知目的地址泛洪及回源副本过滤           |
-| [03 · IPv4 静态路由](./examples/03-ipv4-router/README.md) | LPM 查找、下一跳与源 MAC 改写、TTL 和校验和        |
-| [04 · IPv4 ACL](./examples/04-acl/README.md)              | 五元组三元匹配、规则优先级、计数与过滤后的二层转发 |
-| [05 · ECMP](./examples/05-ecmp/README.md)                 | 哈希选路与同流稳定性，对照 Thrift、P4Runtime 配置  |
-| [VSS 架构参考](./examples/vss/README.md)                  | 阅读另一种架构接口，用 `p4test` 做静态检查         |
+| 示例                                                      | 实验内容                                            |
+| --------------------------------------------------------- | --------------------------------------------------- |
+| [01 · Hello P4](./examples/01-hello/README.md)            | 从入端口原样返回报文，检查内容与输出端口            |
+| [02 · L2 静态转发](./examples/02-l2-switch/README.md)     | 静态单播、未知目的地址泛洪及回源副本过滤            |
+| [03 · IPv4 静态路由](./examples/03-ipv4-router/README.md) | LPM 查找、下一跳选择、MAC 改写与 TTL、校验和更新    |
+| [04 · IPv4 ACL](./examples/04-acl/README.md)              | 五元组三元匹配、规则优先级与计数，允许后查二层表    |
+| [05 · ECMP](./examples/05-ecmp/README.md)                 | CRC32 选路与同流稳定性，对照 Thrift、P4Runtime 配置 |
+| [VSS 架构参考](./examples/vss/README.md)                  | VSS 架构接口、四表处理流程与 `p4test` 静态检查      |
 
-Hello P4 验证报文反射，ECMP 验证报文到达哪个下一跳接收端，不能用端到端 ping 成功作为这两个实验的判断标准。VSS 没有本仓库提供的运行目标。各示例的输入范围、验证方法和限制在对应 README 中说明，运行入口与依赖汇总见[示例总览](./examples/README.md)。
+Hello P4 逐字节比较从同一端口返回的帧，ECMP 检查报文是否到达预期的下一跳，并核对 MAC、TTL 和校验和。VSS 作为架构阅读示例，通过 `p4test` 检查接口与程序装配。运行入口与依赖汇总见[示例总览](./examples/README.md)，各例 README 说明拓扑、输入范围、配置方法与验证预期。
 
 ## 工具与环境
 
-本仓库的实验记录基于 Ubuntu 24.04 / WSL2、p4c `1.2.5.10`、BMv2 `1.15.0` 和 Python `3.12.3`。这些是实测版本，具体依赖及其他环境的核对方法见[第 1 章](./docs/01-环境搭建.md)。
+本仓库的实验记录基于 Ubuntu 24.04 / WSL2、p4c `1.2.5.10`、BMv2 `1.15.0-2bdd0b7b` 和 Python `3.12.3`。准备环境时可按[第 1 章](./docs/01-环境搭建.md)核对实际工具版本、Python 依赖和自检结果。
 
 | 工具                                 | 在教程中的用途                                   |
 | ------------------------------------ | ------------------------------------------------ |
 | `p4c-bm2-ss`                         | 将 V1Model 程序编译为 BMv2 JSON，按需生成 P4Info |
 | `p4test`                             | 检查 P4 语言与类型规则，用于 VSS 等架构阅读示例  |
-| `simple_switch`、`simple_switch_CLI` | 运行 BMv2 程序，通过 Thrift 配置表项等资源       |
-| `simple_switch_grpc`、Python 客户端  | 运行 P4Runtime 配置实验                          |
+| `simple_switch`、`simple_switch_CLI` | 运行 V1Model 程序，通过 Thrift 配置表项和多播组  |
+| `simple_switch_grpc`、Python 客户端  | P4Runtime 配置、表项读写与 Packet I/O 实验       |
 | `ip`、`ping`、`tcpdump`              | 创建网络、检查连通性和抓包                       |
 | Mininet                              | 第 1 章的独立自检和第 14 章的拓扑实验            |
 
