@@ -29,9 +29,9 @@ sudo bash examples/check-env.sh
 | --------------------- | ----------------------------------------------------- |
 | 编译编号示例          | `p4c-bm2-ss` 及随工具链安装的 `core.p4`、`v1model.p4` |
 | 默认方式运行编号示例  | Linux、Bash、`simple_switch`、`ip`、`python3`         |
-| 02～05 的运行脚本     | `timeout`                                             |
-| 02～05 的 Thrift 配置 | `simple_switch_CLI`                                   |
-| 02～04 的连通性检查   | `ping`                                                |
+| 02~05 的运行脚本     | `timeout`                                             |
+| 02~05 的 Thrift 配置 | `simple_switch_CLI`                                   |
+| 02~04 的连通性检查   | `ping`                                                |
 | 手工抓包              | `tcpdump`                                             |
 | VSS 静态检查          | `p4test`                                              |
 
@@ -76,7 +76,7 @@ sudo bash examples/01-hello/run.sh --keep
 ├── build.sh                   # 编译，可指定输出目录
 ├── run.sh                     # 创建拓扑、配置、验证与清理
 ├── verify.py                  # 报文验证
-└── runtime/                   # 02～05 提供，01 无此目录
+└── runtime/                   # 02~05 提供，01 无此目录
     ├── s1-commands.txt        # Thrift 配置命令
     └── ctrl.py                # 仅 05 提供，P4Runtime 客户端
 ```
@@ -109,6 +109,6 @@ VSS 的架构声明、参考程序及 `p4test` 检查命令见其 [README](./vss
 | CLI 配置报错             | 是否用了本例的新实例，是否重复加载，以及具体命令的错误输出 |
 | 报文验证失败             | 对照当前源码、表项与输出端口，查看脚本打印的交换机日志     |
 
-02～05 的 Thrift 端口默认为 9090，各脚本提供独立的端口环境变量。05 的 P4Runtime 模式还使用 gRPC 端口。变量名和使用条件见各示例 README，通用定位方法见[附录 D](../appendix/D-常见问题.md)。
+02~05 的 Thrift 端口默认为 9090，各脚本提供独立的端口环境变量。05 的 P4Runtime 模式还使用 gRPC 端口。变量名和使用条件见各示例 README，通用定位方法见[附录 D](../appendix/D-常见问题.md)。
 
 新增示例时，请同时写清输入范围、配置方法、验证预期和实测工具版本。贡献说明见[项目首页](../README.md#参与修改)。

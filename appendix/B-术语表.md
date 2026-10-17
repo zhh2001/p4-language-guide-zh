@@ -97,7 +97,7 @@ P4₁₆ 语言术语依据 v1.2.5 规范，P4Runtime 术语依据 v1.4.1 规范
 
 | 英文                         | 中文             | 说明                                                                                                                        |
 | ---------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| IHL (Internet Header Length) | IPv4 报头长度    | 以 32 位字为单位，合法值为 5～15，即 20～60 字节。见 [RFC 791 §3.1](https://www.rfc-editor.org/rfc/rfc791.html#section-3.1) |
+| IHL (Internet Header Length) | IPv4 报头长度    | 以 32 位字为单位，合法值为 5\~15，即 20\~60 字节。见 [RFC 791 §3.1](https://www.rfc-editor.org/rfc/rfc791.html#section-3.1) |
 | Implicit cast                | 隐式类型转换     | 不显式写出转换表达式的类型转换，只在语言允许的情形发生                                                                      |
 | Ingress                      | 入方向/入向处理 | 面向输入侧的处理阶段，其接口和进入路径由架构规定                                                                            |
 | Instantiation                | 实例化           | 在编译期建立 Parser、Control、Package 或可实例化的 extern 的实例，并绑定构造参数     |

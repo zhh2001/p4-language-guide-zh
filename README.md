@@ -18,10 +18,10 @@ sudo bash examples/check-env.sh
 
 学习时可以把阅读和实验穿插起来：
 
-1. 读第 1～3 章，运行 Hello P4，先看清入端口、出端口和收到的帧。
-2. 读第 4～9 章，掌握类型、Parser、Control、表与 Deparser，再查看 L2 示例中的单播和泛洪处理。
-3. 读第 10～13 章，结合 IPv4 路由、ACL 和 ECMP 示例，区分语言规则、架构接口与目标行为。
-4. 读第 14～16 章，练习编译、配置与调试，再了解 P4Runtime 和其他架构。ECMP 示例提供 Thrift 与 P4Runtime 两种配置方式，可作对照。
+1. 读第 1~3 章，运行 Hello P4，先看清入端口、出端口和收到的帧。
+2. 读第 4~9 章，掌握类型、Parser、Control、表与 Deparser，再查看 L2 示例中的单播和泛洪处理。
+3. 读第 10~13 章，结合 IPv4 路由、ACL 和 ECMP 示例，区分语言规则、架构接口与目标行为。
+4. 读第 14~16 章，练习编译、配置与调试，再了解 P4Runtime 和其他架构。ECMP 示例提供 Thrift 与 P4Runtime 两种配置方式，可作对照。
 
 ## 章节目录
 
